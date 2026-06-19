@@ -219,7 +219,7 @@ class _BookFlipScreenState extends State<BookFlipScreen> {
     );
   }
 
-  Widget _buildPageContent(int index, _BookData book) {
+  Widget _buildPageContent(int index, BookData book) {
     switch (index) {
       case 0:
         return _CoverPage(book: book);
@@ -243,7 +243,7 @@ class _BookFlipScreenState extends State<BookFlipScreen> {
 }
 
 class _CoverPage extends StatelessWidget {
-  final _BookData book;
+  final BookData book;
 
   const _CoverPage({required this.book});
 
@@ -335,7 +335,7 @@ class _CoverPage extends StatelessWidget {
 }
 
 class _SummaryPage extends StatelessWidget {
-  final _BookData book;
+  final BookData book;
 
   const _SummaryPage({required this.book});
 
@@ -482,7 +482,7 @@ class _LessonPage extends StatelessWidget {
 }
 
 class _FirstChapterPage extends StatelessWidget {
-  final _BookData book;
+  final BookData book;
 
   const _FirstChapterPage({required this.book});
 

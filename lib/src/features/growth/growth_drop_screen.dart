@@ -11,7 +11,7 @@ class GrowthDropScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final drop = ref.watch(growthDropProvider);
+    final drop = ref.watch(growthDropProvider).valueOrNull;
 
     return Scaffold(
       body: SafeArea(
@@ -83,7 +83,7 @@ class GrowthDropScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      drop.focusArea,
+                      drop?.focusArea ?? '',
                       style: const TextStyle(
                         fontSize: 15,
                         color: AppColors.white,
@@ -97,13 +97,13 @@ class GrowthDropScreen extends ConsumerWidget {
               _SectionCard(
                 icon: Icons.person_rounded,
                 title: 'Why this book for you',
-                content: drop.whyThisBook,
+                content: drop?.whyThisBook ?? '',
               ),
               const SizedBox(height: 16),
               _SectionCard(
                 icon: Icons.menu_book_rounded,
                 title: 'What it\'s about',
-                content: drop.whatItsAbout,
+                content: drop?.whatItsAbout ?? '',
               ),
               const SizedBox(height: 16),
               const Text(
@@ -117,26 +117,26 @@ class GrowthDropScreen extends ConsumerWidget {
               const SizedBox(height: 12),
               _LessonCard(
                 number: 1,
-                title: drop.lessons.isNotEmpty ? _extractTitle(drop.lessons[0]) : '',
-                description: drop.lessons.isNotEmpty ? drop.lessons[0] : '',
+                title: (drop?.lessons ?? []).isNotEmpty ? _extractTitle((drop?.lessons ?? [])[0]) : '',
+                description: (drop?.lessons ?? []).isNotEmpty ? (drop?.lessons ?? [])[0] : '',
               ),
               const SizedBox(height: 10),
               _LessonCard(
                 number: 2,
-                title: drop.lessons.length > 1 ? _extractTitle(drop.lessons[1]) : '',
-                description: drop.lessons.length > 1 ? drop.lessons[1] : '',
+                title: (drop?.lessons ?? []).length > 1 ? _extractTitle((drop?.lessons ?? [])[1]) : '',
+                description: (drop?.lessons ?? []).length > 1 ? (drop?.lessons ?? [])[1] : '',
               ),
               const SizedBox(height: 10),
               _LessonCard(
                 number: 3,
-                title: drop.lessons.length > 2 ? _extractTitle(drop.lessons[2]) : '',
-                description: drop.lessons.length > 2 ? drop.lessons[2] : '',
+                title: (drop?.lessons ?? []).length > 2 ? _extractTitle((drop?.lessons ?? [])[2]) : '',
+                description: (drop?.lessons ?? []).length > 2 ? (drop?.lessons ?? [])[2] : '',
               ),
               const SizedBox(height: 20),
               _SectionCard(
                 icon: Icons.bookmark_rounded,
                 title: 'Chapter to read first',
-                content: drop.firstChapter,
+                content: drop?.firstChapter ?? '',
               ),
               const SizedBox(height: 24),
               Container(
@@ -179,7 +179,7 @@ class GrowthDropScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      drop.dailyAction,
+                      drop?.dailyAction ?? '',
                       style: const TextStyle(
                         fontSize: 14,
                         height: 1.5,
@@ -196,7 +196,7 @@ class GrowthDropScreen extends ConsumerWidget {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          drop.dailyActionDuration,
+                          drop?.dailyActionDuration ?? '',
                           style: const TextStyle(
                             fontSize: 13,
                             color: AppColors.grey500,

@@ -1,41 +1,34 @@
+import 'package:supabase_flutter/supabase_flutter.dart' as supa;
 import '../../domain/models/companion.dart';
 
 class CompanionRepository {
-  static final List<Companion> _mockCompanions = [
-    const Companion(
-      id: 'companion_1',
-      name: 'Ambition',
-      type: 'discipline',
-      description: 'For discipline, career, and action',
-      assetPath: 'assets/companions/ambition.riv',
-    ),
-    const Companion(
-      id: 'companion_2',
-      name: 'Creativity',
-      type: 'creativity',
-      description: 'For expression, imagination, and originality',
-      assetPath: 'assets/companions/creativity.riv',
-    ),
-    const Companion(
-      id: 'companion_3',
-      name: 'Wisdom',
-      type: 'wisdom',
-      description: 'For focus, clarity, and calm',
-      assetPath: 'assets/companions/wisdom.riv',
-    ),
-  ];
-
   Future<List<Companion>> getAvailableCompanions() async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    return _mockCompanions;
+    final data = await supa.Supabase.instance.client
+        .from('companions')
+        .select()
+        .order('created_at');
+    return (data as List).map((json) => Companion(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      type: json['type'] as String,
+      description: json['description'] as String? ?? '',
+      assetPath: json['asset_path'] as String? ?? '',
+    )).toList();
   }
 
   Future<Companion?> getCompanionById(String id) async {
-    await Future.delayed(const Duration(milliseconds: 150));
-    try {
-      return _mockCompanions.firstWhere((c) => c.id == id);
-    } catch (_) {
-      return null;
-    }
+    final data = await supa.Supabase.instance.client
+        .from('companions')
+        .select()
+        .eq('id', id)
+        .maybeSingle();
+    if (data == null) return null;
+    return Companion(
+      id: data['id'] as String,
+      name: data['name'] as String,
+      type: data['type'] as String,
+      description: data['description'] as String? ?? '',
+      assetPath: data['asset_path'] as String? ?? '',
+    );
   }
 }

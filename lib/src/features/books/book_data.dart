@@ -53,8 +53,8 @@ const books = <BookData>[
     title: 'Atomic Habits',
     author: 'James Clear',
     tagline: 'Build small changes',
-    gradientBegin: const Color(0xFFEC4899),
-    gradientEnd: const Color(0xFFBE185D),
+    gradientBegin: Color(0xFFEC4899),
+    gradientEnd: Color(0xFFBE185D),
     icon: Icons.loop_rounded,
     summary:
       'A practical framework for building good habits and breaking bad ones '
@@ -75,8 +75,8 @@ const books = <BookData>[
     title: 'The Creative Act',
     author: 'Rick Rubin',
     tagline: 'Unlock your creativity',
-    gradientBegin: const Color(0xFF14B8A6),
-    gradientEnd: const Color(0xFF0F766E),
+    gradientBegin: Color(0xFF14B8A6),
+    gradientEnd: Color(0xFF0F766E),
     icon: Icons.auto_awesome_rounded,
     summary:
       'A masterclass in creativity from one of the most legendary music producers. '

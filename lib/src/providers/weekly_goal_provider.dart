@@ -19,8 +19,7 @@ class WeeklyGoalNotifier extends StateNotifier<AsyncValue<WeeklyGoal?>> {
 
   Future<void> _init() async {
     state = const AsyncValue.loading();
-    state =
-        await AsyncValue.guard(() => _repository.getCurrentWeeklyGoal('user_1'));
+    state = await AsyncValue.guard(() => _repository.getCurrentWeeklyGoal());
   }
 
   Future<void> setGoal(WeeklyGoal goal) async {

@@ -63,7 +63,7 @@ class GrowthDropCard extends ConsumerWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      drop.focusArea,
+                      drop.valueOrNull?.focusArea ?? '',
                       style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w400,
@@ -77,7 +77,7 @@ class GrowthDropCard extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'Discover ${drop.bookTitle} tailored to your growth journey.',
+            'Discover ${drop.valueOrNull?.bookTitle ?? ''} tailored to your growth journey.',
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w400,

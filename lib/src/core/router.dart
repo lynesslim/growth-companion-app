@@ -10,6 +10,7 @@ import '../features/onboarding/onboarding_screen.dart';
 import '../features/onboarding/companion_selection_screen.dart';
 import '../features/focus/weekly_focus_screen.dart';
 import '../features/onboarding/profile_created_screen.dart';
+import '../features/books/action_plans_screen.dart';
 import '../features/books/book_flip_screen.dart';
 import '../features/books/congrats_screen.dart';
 import '../features/growth/growth_drop_screen.dart';
@@ -108,6 +109,17 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final id = int.tryParse(state.pathParameters['id'] ?? '0') ?? 0;
           return BookFlipScreen(bookIndex: id);
+        },
+      ),
+      GoRoute(
+        path: '/action-plans',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) {
+          final bookIndex = int.tryParse(
+                state.uri.queryParameters['bookIndex'] ?? '0',
+              ) ??
+              0;
+          return ActionPlansScreen(bookIndex: bookIndex);
         },
       ),
       GoRoute(

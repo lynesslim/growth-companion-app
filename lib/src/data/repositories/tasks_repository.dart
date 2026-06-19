@@ -1,107 +1,107 @@
+import 'package:supabase_flutter/supabase_flutter.dart' as supa;
 import '../../domain/models/quest.dart';
 import '../../domain/models/weekly_goal.dart';
 
 class TasksRepository {
-  final List<Quest> _dailyQuests = [
-    const Quest(
-      id: 'quest_1',
-      title: 'Protect 30 minutes of focus',
-      xpReward: 10,
-      isCompleted: false,
-      type: 'daily',
-      description: 'Inspired by: Deep Work',
-      xpCategory: '+10 Focus XP',
-      duration: '30 min',
-    ),
-    const Quest(
-      id: 'quest_2',
-      title: 'Write down 5 rough ideas',
-      xpReward: 8,
-      isCompleted: false,
-      type: 'daily',
-      description: 'Inspired by: The Creative Act',
-      xpCategory: '+8 Creativity XP',
-      duration: '15 min',
-    ),
-    const Quest(
-      id: 'quest_3',
-      title: 'Review one expense',
-      xpReward: 10,
-      isCompleted: false,
-      type: 'daily',
-      description: 'Inspired by: I Will Teach You To Be Rich',
-      xpCategory: '+10 Wealth XP',
-      duration: '10 min',
-    ),
-  ];
-
-  final List<Quest> _weeklyQuests = [
-    const Quest(
-      id: 'quest_4',
-      title: 'Read your first lesson',
-      xpReward: 15,
-      isCompleted: true,
-      type: 'weekly',
-      description: 'Completed yesterday',
-      xpCategory: '+15 XP',
-      duration: '',
-    ),
-    const Quest(
-      id: 'quest_5',
-      title: 'Complete all 3 book overviews',
-      xpReward: 25,
-      isCompleted: false,
-      type: 'weekly',
-      description: 'Inspired by: Weekly Focus',
-      xpCategory: '+25 Wisdom XP',
-      duration: '20 min',
-    ),
-  ];
+  String get _userId => supa.Supabase.instance.client.auth.currentUser?.id ?? '';
 
   Future<List<Quest>> getDailyQuests() async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    return _dailyQuests;
+    if (_userId.isEmpty) return [];
+    final data = await supa.Supabase.instance.client
+        .from('quests')
+        .select()
+        .eq('user_id', _userId)
+        .eq('quest_type', 'daily')
+        .order('created_at');
+    return (data as List).map((json) => _questFromSupabase(json)).toList();
   }
 
   Future<List<Quest>> getWeeklyQuests() async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    return _weeklyQuests;
+    if (_userId.isEmpty) return [];
+    final data = await supa.Supabase.instance.client
+        .from('quests')
+        .select()
+        .eq('user_id', _userId)
+        .eq('quest_type', 'weekly')
+        .order('created_at');
+    return (data as List).map((json) => _questFromSupabase(json)).toList();
+  }
+
+  Future<Quest> addQuest(Quest quest) async {
+    if (_userId.isEmpty) throw Exception('Not authenticated');
+    final data = await supa.Supabase.instance.client
+        .from('quests')
+        .insert({
+          'user_id': _userId,
+          'title': quest.title,
+          'xp_reward': quest.xpReward,
+          'is_completed': quest.isCompleted,
+          'quest_type': quest.type,
+        })
+        .select()
+        .single();
+    return _questFromSupabase(data);
   }
 
   Future<Quest> completeQuest(String questId) async {
-    await Future.delayed(const Duration(milliseconds: 200));
-
-    final dailyIndex = _dailyQuests.indexWhere((q) => q.id == questId);
-    if (dailyIndex != -1) {
-      _dailyQuests[dailyIndex] = _dailyQuests[dailyIndex].copyWith(
-        isCompleted: true,
-        completedAt: DateTime.now(),
-      );
-      return _dailyQuests[dailyIndex];
-    }
-
-    final weeklyIndex = _weeklyQuests.indexWhere((q) => q.id == questId);
-    if (weeklyIndex != -1) {
-      _weeklyQuests[weeklyIndex] = _weeklyQuests[weeklyIndex].copyWith(
-        isCompleted: true,
-        completedAt: DateTime.now(),
-      );
-      return _weeklyQuests[weeklyIndex];
-    }
-
-    throw Exception('Quest not found: $questId');
+    final data = await supa.Supabase.instance.client
+        .from('quests')
+        .update({'is_completed': true})
+        .eq('id', questId)
+        .select()
+        .single();
+    return _questFromSupabase(data);
   }
 
-  WeeklyGoal? _currentWeeklyGoal;
-
-  Future<WeeklyGoal?> getCurrentWeeklyGoal(String userId) async {
-    await Future.delayed(const Duration(milliseconds: 150));
-    return _currentWeeklyGoal;
+  Future<WeeklyGoal?> getCurrentWeeklyGoal() async {
+    if (_userId.isEmpty) return null;
+    final data = await supa.Supabase.instance.client
+        .from('weekly_goals')
+        .select()
+        .eq('user_id', _userId)
+        .eq('status', 'active')
+        .maybeSingle();
+    if (data == null) return null;
+    return _weeklyGoalFromSupabase(data);
   }
 
   Future<WeeklyGoal> setWeeklyGoal(WeeklyGoal goal) async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    _currentWeeklyGoal = goal;
-    return goal;
+    final data = await supa.Supabase.instance.client
+        .from('weekly_goals')
+        .insert({
+          'user_id': _userId,
+          'focus_area': goal.focusArea,
+          'status': goal.status,
+          'start_date': goal.startDate.toIso8601String(),
+          'end_date': goal.endDate?.toIso8601String(),
+        })
+        .select()
+        .single();
+    return _weeklyGoalFromSupabase(data);
   }
+
+  Quest _questFromSupabase(Map<String, dynamic> json) => Quest(
+        id: json['id'] as String,
+        title: json['title'] as String,
+        xpReward: (json['xp_reward'] as num?)?.toInt() ?? 10,
+        isCompleted: json['is_completed'] as bool? ?? false,
+        type: (json['quest_type'] as String?) ?? 'daily',
+        description: json['description'] as String? ?? '',
+        xpCategory: json['xp_category'] as String? ?? '+10 XP',
+        duration: json['duration'] as String? ?? '15 min',
+        completedAt: json['completed_at'] != null
+            ? DateTime.parse(json['completed_at'] as String)
+            : null,
+      );
+
+  WeeklyGoal _weeklyGoalFromSupabase(Map<String, dynamic> json) => WeeklyGoal(
+        id: json['id'] as String,
+        userId: json['user_id'] as String,
+        focusArea: json['focus_area'] as String,
+        status: json['status'] as String? ?? 'active',
+        startDate: DateTime.parse(json['start_date'] as String),
+        endDate: json['end_date'] != null
+            ? DateTime.parse(json['end_date'] as String)
+            : null,
+      );
 }

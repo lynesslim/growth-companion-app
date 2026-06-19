@@ -28,6 +28,12 @@ class DailyQuestsNotifier extends StateNotifier<AsyncValue<List<Quest>>> {
     state = await AsyncValue.guard(() => _repository.getDailyQuests());
   }
 
+  void addQuest(Quest quest) {
+    final current = [...state.valueOrNull ?? []];
+    state = AsyncValue.data([quest, ...current]);
+    _repository.addQuest(quest);
+  }
+
   Future<void> completeQuest(String questId) async {
     state = await AsyncValue.guard(() async {
       final updated = await _repository.completeQuest(questId);

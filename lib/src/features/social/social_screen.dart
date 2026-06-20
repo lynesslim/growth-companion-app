@@ -72,32 +72,50 @@ class _SocialScreenState extends ConsumerState<SocialScreen> {
           final userId = userStateAsync.valueOrNull?.id;
 
           return ListView(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.only(left: 24, right: 24, top: 24, bottom: 100),
             children: [
-              // Search bar
-              TextField(
-                controller: _searchController,
-                onChanged: _onSearchChanged,
-                decoration: InputDecoration(
-                  hintText: 'Search by name or email...',
-                  prefixIcon: const Icon(Icons.search, color: AppColors.grey400),
-                  suffixIcon: _searchController.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear, size: 18),
-                          onPressed: () {
-                            _searchController.clear();
-                            _onSearchChanged('');
-                          },
-                        )
-                      : null,
-                  filled: true,
-                  fillColor: AppColors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
+              // Search bar and Invite
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: _onSearchChanged,
+                      decoration: InputDecoration(
+                        hintText: 'Search by name or email...',
+                        prefixIcon: const Icon(Icons.search, color: AppColors.grey400),
+                        suffixIcon: _searchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear, size: 18),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  _onSearchChanged('');
+                                },
+                              )
+                            : null,
+                        filled: true,
+                        fillColor: AppColors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                      ),
+                    ),
                   ),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-                ),
+                  const SizedBox(width: 12),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.person_add, color: AppColors.white),
+                      onPressed: () => _shareInvite(userId),
+                      tooltip: 'Invite a Friend',
+                    ),
+                  ),
+                ],
               ),
               // Search results
               if (socialState.isSearching)
@@ -131,7 +149,9 @@ class _SocialScreenState extends ConsumerState<SocialScreen> {
                   final unopenedCount = socialState.receivedDrops
                       .where((d) => d.senderId == friendId && !d.isOpened)
                       .length;
-                  return _buildFriendCard(friend, streak, userId, friend.status == 'pending', unopenedCount);
+                  final alreadySent = socialState.sentTodayFriendIds.contains(friendId);
+                  final isUserAdmin = socialState.isAdmin;
+                  return _buildFriendCard(friend, streak, userId, friend.status == 'pending', unopenedCount, alreadySent: alreadySent, isAdmin: isUserAdmin);
                 }),
                 const SizedBox(height: 24),
               ],
@@ -140,20 +160,6 @@ class _SocialScreenState extends ConsumerState<SocialScreen> {
               if (socialState.acceptedFriends.isEmpty && socialState.outgoingRequests.isEmpty && socialState.pendingRequests.isEmpty && socialState.searchResults.isEmpty)
                 _buildEmptyState(userId),
 
-              // Invite button
-              if (socialState.acceptedFriends.isNotEmpty || socialState.outgoingRequests.isNotEmpty)
-                Center(
-                  child: ElevatedButton.icon(
-                    onPressed: () => _shareInvite(userId),
-                    icon: const Icon(Icons.person_add),
-                    label: const Text('Invite More Friends'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: AppColors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    ),
-                  ),
-                ),
             ],
           );
         },
@@ -317,8 +323,17 @@ class _SocialScreenState extends ConsumerState<SocialScreen> {
     }
   }
 
-  Widget _buildFriendCard(dynamic friend, dynamic streak, String? currentUserId, bool isPending, int unopenedCount) {
+  Widget _buildFriendCard(
+    dynamic friend,
+    dynamic streak,
+    String? currentUserId,
+    bool isPending,
+    int unopenedCount, {
+    required bool alreadySent,
+    required bool isAdmin,
+  }) {
     final profile = friend.profile;
+    final canSend = !alreadySent || isAdmin;
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -359,10 +374,12 @@ class _SocialScreenState extends ConsumerState<SocialScreen> {
                 ],
               ),
         trailing: IconButton(
-          icon: const Icon(Icons.send, color: AppColors.primary),
-          onPressed: () {
-            _showSendDialog(context, ref, friend);
-          },
+          icon: Icon(Icons.send, color: canSend ? AppColors.primary : AppColors.grey400),
+          onPressed: canSend
+              ? () {
+                  _showSendDialog(context, ref, friend);
+                }
+              : null,
         ),
         onTap: profile != null
             ? () {
@@ -420,6 +437,10 @@ class _SocialScreenState extends ConsumerState<SocialScreen> {
     final friendName = friend.profile?.name;
     if (friendId == null) return;
 
+    final socialState = ref.read(socialProvider).valueOrNull;
+    final isAdmin = socialState?.isAdmin ?? false;
+    final alreadySent = (socialState?.sentTodayFriendIds.contains(friendId) ?? false) && !isAdmin;
+
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -448,11 +469,15 @@ class _SocialScreenState extends ConsumerState<SocialScreen> {
                     color: AppColors.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.card_giftcard, color: AppColors.primary),
+                  child: Icon(Icons.card_giftcard, color: alreadySent ? AppColors.grey400 : AppColors.primary),
                 ),
-                title: const Text('Send Blind Box (AI)'),
-                subtitle: const Text('AI generates a book based on their goals'),
-                onTap: () async {
+                title: Text('Send Blind Box (AI)', style: TextStyle(color: alreadySent ? AppColors.grey400 : null)),
+                subtitle: Text(
+                  alreadySent ? 'Already sent today' : 'AI generates a book based on their goals',
+                  style: TextStyle(color: alreadySent ? AppColors.grey400 : AppColors.grey600),
+                ),
+                enabled: !alreadySent,
+                onTap: alreadySent ? null : () async {
                   Navigator.pop(ctx);
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Generating and sending...')));
                   try {
@@ -475,11 +500,15 @@ class _SocialScreenState extends ConsumerState<SocialScreen> {
                     color: AppColors.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.menu_book_rounded, color: AppColors.primary),
+                  child: Icon(Icons.menu_book_rounded, color: alreadySent ? AppColors.grey400 : AppColors.primary),
                 ),
-                title: const Text('Send from Journal'),
-                subtitle: const Text('Choose a book you\'ve read'),
-                onTap: () {
+                title: Text('Send from Journal', style: TextStyle(color: alreadySent ? AppColors.grey400 : null)),
+                subtitle: Text(
+                  alreadySent ? 'Already sent today' : 'Choose a book you\'ve read',
+                  style: TextStyle(color: alreadySent ? AppColors.grey400 : AppColors.grey600),
+                ),
+                enabled: !alreadySent,
+                onTap: alreadySent ? null : () {
                   Navigator.pop(ctx);
                   _showJournalPicker(context, ref, friendId);
                 },
@@ -493,6 +522,10 @@ class _SocialScreenState extends ConsumerState<SocialScreen> {
   }
 
   void _showJournalPicker(BuildContext context, WidgetRef ref, String friendId) {
+    final socialState = ref.read(socialProvider).valueOrNull;
+    final isAdmin = socialState?.isAdmin ?? false;
+    final alreadySent = (socialState?.sentTodayFriendIds.contains(friendId) ?? false) && !isAdmin;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -541,14 +574,23 @@ class _SocialScreenState extends ConsumerState<SocialScreen> {
                               leading: Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: AppColors.primaryLight.withOpacity(0.2),
+                                  color: alreadySent
+                                      ? AppColors.grey200
+                                      : AppColors.primaryLight.withOpacity(0.2),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
-                                child: const Icon(Icons.menu_book_rounded, color: AppColors.primary, size: 20),
+                                child: Icon(Icons.menu_book_rounded,
+                                    color: alreadySent ? AppColors.grey400 : AppColors.primary, size: 20),
                               ),
-                              title: Text(drop.bookTitle, style: const TextStyle(fontWeight: FontWeight.w600)),
-                              subtitle: Text(drop.bookAuthor, style: const TextStyle(color: AppColors.grey500)),
-                              onTap: () {
+                              title: Text(drop.bookTitle,
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      color: alreadySent ? AppColors.grey400 : null)),
+                              subtitle: Text(drop.bookAuthor,
+                                  style: TextStyle(
+                                      color: alreadySent ? AppColors.grey400 : AppColors.grey500)),
+                              enabled: !alreadySent,
+                              onTap: alreadySent ? null : () {
                                 Navigator.pop(ctx);
                                 ref.read(socialProvider.notifier).sendBookFromJournal(friendId, {
                                   'bookTitle': drop.bookTitle,

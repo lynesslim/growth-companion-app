@@ -17,6 +17,8 @@ class SocialState {
   final List<SocialStreak> streaks;
   final List<app_user.User> searchResults;
   final bool isSearching;
+  final Set<String> sentTodayFriendIds;
+  final bool isAdmin;
 
   SocialState({
     required this.acceptedFriends,
@@ -26,6 +28,8 @@ class SocialState {
     required this.streaks,
     this.searchResults = const [],
     this.isSearching = false,
+    this.sentTodayFriendIds = const {},
+    this.isAdmin = false,
   });
 }
 
@@ -129,12 +133,28 @@ class SocialNotifier extends AsyncNotifier<SocialState> {
       return SocialDrop.fromJson(d, senderProfile: senderProfile);
     }).toList();
 
+    // Fetch drops sent by me today
+    final today = DateTime.now().toIso8601String().split('T')[0];
+    final sentTodayResponse = await _supabase
+        .from('social_drops')
+        .select('recipient_id')
+        .eq('sender_id', uid)
+        .eq('drop_date', today);
+    
+    final sentTodayFriendIds = (sentTodayResponse as List).map((e) => e['recipient_id'].toString()).toSet();
+
+    // Fetch admin status
+    final profileData = await _supabase.from('profiles').select('is_admin').eq('id', uid).maybeSingle();
+    final isAdmin = profileData?['is_admin'] == true;
+
     return SocialState(
       acceptedFriends: acceptedFriends,
       pendingRequests: pendingRequests,
       outgoingRequests: outgoingRequests,
       receivedDrops: receivedDrops,
       streaks: streaks,
+      sentTodayFriendIds: sentTodayFriendIds,
+      isAdmin: isAdmin,
     );
   }
 
@@ -143,15 +163,9 @@ class SocialNotifier extends AsyncNotifier<SocialState> {
     if (user == null) return;
     try {
       final today = DateTime.now().toIso8601String().split('T')[0];
+      final isAdmin = state.value?.isAdmin ?? false;
 
       // 1. Client-side check (skip for admins)
-      final profile = await _supabase
-          .from('profiles')
-          .select('is_admin')
-          .eq('id', user.id)
-          .maybeSingle();
-      final isAdmin = profile?['is_admin'] == true;
-
       if (!isAdmin) {
         final existingDrop = await _supabase
             .from('social_drops')
@@ -182,53 +196,7 @@ class SocialNotifier extends AsyncNotifier<SocialState> {
         rethrow;
       }
 
-      var streakData = await _supabase
-          .from('social_streaks')
-          .select()
-          .eq('user_id_1', user.id)
-          .eq('user_id_2', friendId)
-          .maybeSingle();
-
-      if (streakData == null) {
-        streakData = await _supabase
-            .from('social_streaks')
-            .select()
-            .eq('user_id_1', friendId)
-            .eq('user_id_2', user.id)
-            .maybeSingle();
-      }
-
-      if (streakData != null) {
-        final isUser1 = streakData['user_id_1'] == user.id;
-        final myLastDate = isUser1 ? streakData['last_shared_date_1'] : streakData['last_shared_date_2'];
-        final otherDate = isUser1 ? streakData['last_shared_date_2'] : streakData['last_shared_date_1'];
-
-        if (myLastDate == today) {
-          ref.invalidateSelf();
-          return; // already sent today, no double-count
-        }
-
-        final updatePayload = <String, dynamic>{};
-        if (isUser1) {
-          updatePayload['last_shared_date_1'] = today;
-          if (otherDate == today) {
-            updatePayload['current_streak'] = (streakData['current_streak'] as int? ?? 0) + 1;
-          }
-        } else {
-          updatePayload['last_shared_date_2'] = today;
-          if (otherDate == today) {
-            updatePayload['current_streak'] = (streakData['current_streak'] as int? ?? 0) + 1;
-          }
-        }
-        await _supabase.from('social_streaks').update(updatePayload).eq('id', streakData['id']);
-      } else {
-        await _supabase.from('social_streaks').insert({
-          'user_id_1': user.id,
-          'user_id_2': friendId,
-          'last_shared_date_1': today,
-          'current_streak': 0,
-        });
-      }
+      await _updateStreak(friendId, today);
 
       ref.invalidateSelf();
     } catch (e) {
@@ -260,16 +228,88 @@ class SocialNotifier extends AsyncNotifier<SocialState> {
     final user = _supabase.auth.currentUser;
     if (user == null) return;
     try {
+      final today = DateTime.now().toIso8601String().split('T')[0];
+      final isAdmin = state.value?.isAdmin ?? false;
+
+      if (!isAdmin) {
+        final existingDrop = await _supabase
+            .from('social_drops')
+            .select('id')
+            .eq('sender_id', user.id)
+            .eq('recipient_id', friendId)
+            .eq('drop_date', today)
+            .maybeSingle();
+
+        if (existingDrop != null) {
+          throw Exception('You already sent a drop to this friend today!');
+        }
+      }
+
       await _supabase.from('social_drops').insert({
         'sender_id': user.id,
         'recipient_id': friendId,
-        'drop_date': DateTime.now().toIso8601String().split('T')[0],
+        'drop_date': today,
         'book_data': bookData,
       });
+
+      await _updateStreak(friendId, today);
+
       ref.invalidateSelf();
     } catch (e) {
       print('Error sending book: $e');
       rethrow;
+    }
+  }
+
+  Future<void> _updateStreak(String friendId, String today) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return;
+
+    var streakData = await _supabase
+        .from('social_streaks')
+        .select()
+        .eq('user_id_1', user.id)
+        .eq('user_id_2', friendId)
+        .maybeSingle();
+
+    if (streakData == null) {
+      streakData = await _supabase
+          .from('social_streaks')
+          .select()
+          .eq('user_id_1', friendId)
+          .eq('user_id_2', user.id)
+          .maybeSingle();
+    }
+
+    if (streakData != null) {
+      final isUser1 = streakData['user_id_1'] == user.id;
+      final myLastDate = isUser1 ? streakData['last_shared_date_1'] : streakData['last_shared_date_2'];
+      final otherDate = isUser1 ? streakData['last_shared_date_2'] : streakData['last_shared_date_1'];
+
+      if (myLastDate == today) {
+        return; // already sent today, no double-count
+      }
+
+      final updatePayload = <String, dynamic>{};
+      if (isUser1) {
+        updatePayload['last_shared_date_1'] = today;
+        if (otherDate == today) {
+          updatePayload['current_streak'] = (streakData['current_streak'] as int? ?? 0) + 1;
+        }
+      } else {
+        updatePayload['last_shared_date_2'] = today;
+        if (otherDate == today) {
+          updatePayload['current_streak'] = (streakData['current_streak'] as int? ?? 0) + 1;
+        }
+      }
+      await _supabase.from('social_streaks').update(updatePayload).eq('id', streakData['id']);
+    } else {
+      await _supabase.from('social_streaks').insert({
+        'user_id_1': user.id,
+        'user_id_2': friendId,
+        'last_shared_date_1': today,
+        'current_streak': 0,
+      });
     }
   }
 
@@ -345,7 +385,34 @@ class SocialNotifier extends AsyncNotifier<SocialState> {
 
   Future<void> removeFriend(String friendRowId) async {
     try {
+      final row = await _supabase
+          .from('friends')
+          .select('user_id_1, user_id_2')
+          .eq('id', friendRowId)
+          .maybeSingle();
+      if (row == null) return;
+
+      final uid1 = row['user_id_1'] as String;
+      final uid2 = row['user_id_2'] as String;
+
       await _supabase.from('friends').delete().eq('id', friendRowId);
+
+      // Clean up related streaks (both directions)
+      await _supabase
+          .from('social_streaks')
+          .delete()
+          .or('and(user_id_1.eq.$uid1,user_id_2.eq.$uid2),and(user_id_1.eq.$uid2,user_id_2.eq.$uid1)');
+
+      // Clean up related social drops
+      final currentUserId = _supabase.auth.currentUser?.id;
+      if (currentUserId != null) {
+        final otherId = currentUserId == uid1 ? uid2 : uid1;
+        await _supabase
+            .from('social_drops')
+            .delete()
+            .or('and(sender_id.eq.$currentUserId,recipient_id.eq.$otherId),and(sender_id.eq.$otherId,recipient_id.eq.$currentUserId)');
+      }
+
       ref.invalidateSelf();
     } catch (e) {
       rethrow;
@@ -386,6 +453,8 @@ extension _SocialStateCopy on SocialState {
     List<SocialStreak>? streaks,
     List<app_user.User>? searchResults,
     bool? isSearching,
+    Set<String>? sentTodayFriendIds,
+    bool? isAdmin,
   }) {
     return SocialState(
       acceptedFriends: acceptedFriends ?? this.acceptedFriends,
@@ -395,6 +464,8 @@ extension _SocialStateCopy on SocialState {
       streaks: streaks ?? this.streaks,
       searchResults: searchResults ?? this.searchResults,
       isSearching: isSearching ?? this.isSearching,
+      sentTodayFriendIds: sentTodayFriendIds ?? this.sentTodayFriendIds,
+      isAdmin: isAdmin ?? this.isAdmin,
     );
   }
 }

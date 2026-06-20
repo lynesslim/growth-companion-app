@@ -124,6 +124,7 @@ ALTER TABLE friends ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users view own friendships" ON friends FOR SELECT USING (auth.uid() = user_id_1 OR auth.uid() = user_id_2);
 CREATE POLICY "Users insert friendships" ON friends FOR INSERT WITH CHECK (auth.uid() = user_id_1 OR auth.uid() = user_id_2);
 CREATE POLICY "Users update own friendships" ON friends FOR UPDATE USING (auth.uid() = user_id_1 OR auth.uid() = user_id_2);
+CREATE POLICY "Users delete own friendships" ON friends FOR DELETE USING (auth.uid() = user_id_1 OR auth.uid() = user_id_2);
 
 
 -- 7. Social Streaks Table
@@ -141,6 +142,7 @@ CREATE TABLE social_streaks (
 ALTER TABLE social_streaks ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users view own streaks" ON social_streaks FOR SELECT USING (auth.uid() = user_id_1 OR auth.uid() = user_id_2);
 CREATE POLICY "Users update own streaks" ON social_streaks FOR UPDATE USING (auth.uid() = user_id_1 OR auth.uid() = user_id_2);
+CREATE POLICY "Users delete own streaks" ON social_streaks FOR DELETE USING (auth.uid() = user_id_1 OR auth.uid() = user_id_2);
 
 
 -- 8. Social Drops Table
@@ -156,8 +158,9 @@ CREATE TABLE social_drops (
 
 ALTER TABLE social_drops ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users view own social drops" ON social_drops FOR SELECT USING (auth.uid() = sender_id OR auth.uid() = recipient_id);
-CREATE POLICY "Users insert social drops" ON social_drops FOR INSERT WITH CHECK (auth.uid() = sender_id);
+CREATE POLICY "Users insert social drops" ON social_drops FOR INSERT WITH CHECK (auth.uid() = sender_id OR auth.uid() = recipient_id);
 CREATE POLICY "Users update own social drops" ON social_drops FOR UPDATE USING (auth.uid() = recipient_id);
+CREATE POLICY "Users delete own social drops" ON social_drops FOR DELETE USING (auth.uid() = sender_id OR auth.uid() = recipient_id);
 
 
 -- 9. search_users RPC (SECURITY DEFINER)

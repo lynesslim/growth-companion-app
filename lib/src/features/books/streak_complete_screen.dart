@@ -279,6 +279,7 @@ class _StreakCompleteScreenState extends ConsumerState<StreakCompleteScreen> {
   void _showFriendPicker(BuildContext context, WidgetRef ref, GrowthDrop bookData) {
     final socialState = ref.read(socialProvider).valueOrNull;
     final friends = socialState?.acceptedFriends ?? [];
+    final sentToday = socialState?.sentTodayFriendIds ?? const {};
 
     showModalBottomSheet(
       context: context,
@@ -321,14 +322,16 @@ class _StreakCompleteScreenState extends ConsumerState<StreakCompleteScreen> {
                     itemBuilder: (_, i) {
                       final friend = friends[i];
                       final friendId = friend.userId1 == ref.read(userProvider).valueOrNull?.id ? friend.userId2 : friend.userId1;
+                      final alreadySent = sentToday.contains(friendId);
                       return ListTile(
                         leading: CircleAvatar(
-                          backgroundColor: AppColors.primaryLight,
-                          child: Text(friend.profile?.name[0].toUpperCase() ?? '?', style: const TextStyle(color: AppColors.white)),
+                          backgroundColor: alreadySent ? AppColors.grey200 : AppColors.primaryLight,
+                          child: Text(friend.profile?.name[0].toUpperCase() ?? '?', style: TextStyle(color: alreadySent ? AppColors.grey400 : AppColors.white)),
                         ),
-                        title: Text(friend.profile?.name ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.w600)),
-                        trailing: const Icon(Icons.send_rounded, color: AppColors.primary),
-                        onTap: () {
+                        title: Text(friend.profile?.name ?? 'Unknown', style: TextStyle(fontWeight: FontWeight.w600, color: alreadySent ? AppColors.grey400 : null)),
+                        trailing: Icon(alreadySent ? Icons.check_rounded : Icons.send_rounded, color: alreadySent ? AppColors.grey400 : AppColors.primary),
+                        enabled: !alreadySent,
+                        onTap: alreadySent ? null : () {
                           Navigator.pop(ctx);
                           ref.read(socialProvider.notifier).sendBookFromJournal(friendId, {
                             'bookTitle': bookData.bookTitle,

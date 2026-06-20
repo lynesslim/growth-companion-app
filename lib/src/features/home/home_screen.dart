@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/app_colors.dart';
 import '../../providers/growth_drop_provider.dart';
 import '../../providers/social_provider.dart';
+import '../../providers/user_provider.dart';
 import 'widgets/home_header.dart';
 import 'widgets/growth_drop_card.dart';
 import 'widgets/social_drops_card.dart';
@@ -63,12 +64,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final drop = ref.watch(growthDropProvider).valueOrNull;
+    final dropState = ref.watch(growthDropProvider);
+    final drop = dropState.valueOrNull;
 
-    if (!_modalShown && drop != null && !drop.isRead) {
-      _modalShown = true;
-      // Use addPostFrameCallback to show modal after build
-      WidgetsBinding.instance.addPostFrameCallback((_) => _showDropModal(context));
+    if (!_modalShown && !dropState.isLoading) {
+      if (drop == null) {
+        _modalShown = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) => _showGenerateModal(context));
+      } else if (!drop.isRead) {
+        _modalShown = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) => _showDropModal(context));
+      }
     }
 
     return SingleChildScrollView(
@@ -84,6 +90,155 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ],
       ),
     );
+  }
+
+  void _showGenerateModal(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        backgroundColor: AppColors.white,
+        contentPadding: const EdgeInsets.all(28),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [AppColors.primary, AppColors.pinkLight],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(22),
+              ),
+              child: const Center(
+                child: Icon(Icons.auto_awesome_rounded, color: AppColors.white, size: 32),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              "Ready for today's drop?",
+              textAlign: TextAlign.center,
+              style: GoogleFonts.playfairDisplay(
+                fontSize: 24,
+                fontWeight: FontWeight.w700,
+                color: AppColors.grey900,
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Your personalized book is waiting to be generated.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 15, color: AppColors.grey500, height: 1.5),
+            ),
+            const SizedBox(height: 28),
+            SizedBox(
+              width: double.infinity,
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _generateFromModal(context);
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [AppColors.primary, AppColors.pinkLight],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Center(
+                    child: Text(
+                      'Generate Now',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text(
+                'Later',
+                style: TextStyle(color: AppColors.grey500, fontSize: 14),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _generateFromModal(BuildContext context) async {
+    final user = ref.read(userProvider).valueOrNull;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please complete onboarding first')),
+      );
+      return;
+    }
+    
+    // Show loading modal
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        contentPadding: const EdgeInsets.all(32),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('\u{1F4E6}', style: TextStyle(fontSize: 48)),
+            const SizedBox(height: 24),
+            const CircularProgressIndicator(color: AppColors.primary),
+            const SizedBox(height: 24),
+            Text(
+              'Generating...',
+              style: GoogleFonts.playfairDisplay(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: AppColors.grey900,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final body = <String, dynamic>{
+        'user_id': user.id,
+        'drop_date': DateTime.now().toIso8601String().split('T')[0],
+        'onboarding_profile': user.onboardingProfile,
+      };
+      await Supabase.instance.client.functions.invoke(
+        'generate-growth-drop',
+        body: body,
+      );
+      if (mounted) {
+        Navigator.pop(context); // close loading modal
+        ref.invalidate(growthDropProvider);
+        context.push('/book');
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // close loading modal
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to generate: $e')),
+        );
+      }
+    }
   }
 
   void _showDropModal(BuildContext context) {

@@ -142,13 +142,65 @@ class SocialNotifier extends AsyncNotifier<SocialState> {
     final user = _supabase.auth.currentUser;
     if (user == null) return;
     try {
-      await _supabase.functions.invoke('generate-social-drop', body: {
+      await _supabase.from('social_drops').insert({
         'sender_id': user.id,
         'recipient_id': friendId,
+        'drop_date': DateTime.now().toIso8601String().split('T')[0],
+        'book_data': {},
       });
+
+      final today = DateTime.now().toIso8601String().split('T')[0];
+      final streakData = await _supabase
+          .from('social_streaks')
+          .select()
+          .or('and(user_id_1.eq.${user.id},user_id_2.eq.$friendId),and(user_id_1.eq.$friendId,user_id_2.eq.${user.id})')
+          .maybeSingle();
+
+      if (streakData != null) {
+        final isUser1 = streakData['user_id_1'] == user.id;
+        final updatePayload = <String, dynamic>{};
+        if (isUser1) {
+          updatePayload['last_shared_date_1'] = today;
+          if (streakData['last_shared_date_2'] == today) {
+            updatePayload['current_streak'] = (streakData['current_streak'] as int? ?? 0) + 1;
+          }
+        } else {
+          updatePayload['last_shared_date_2'] = today;
+          if (streakData['last_shared_date_1'] == today) {
+            updatePayload['current_streak'] = (streakData['current_streak'] as int? ?? 0) + 1;
+          }
+        }
+        await _supabase.from('social_streaks').update(updatePayload).eq('id', streakData['id']);
+      } else {
+        await _supabase.from('social_streaks').insert({
+          'user_id_1': user.id,
+          'user_id_2': friendId,
+          'last_shared_date_1': today,
+          'current_streak': 0,
+        });
+      }
+
       ref.invalidateSelf();
     } catch (e) {
       print('Error sending drop: $e');
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> openBlindBox(String dropId) async {
+    try {
+      final res = await _supabase.functions.invoke('generate-social-drop', body: {
+        'drop_id': dropId,
+      });
+      await _supabase
+          .from('social_drops')
+          .update({'is_opened': true})
+          .eq('id', dropId);
+      ref.invalidateSelf();
+      final data = res.data;
+      return Map<String, dynamic>.from(data is Map ? data : {});
+    } catch (e) {
+      print('Error opening blind box: $e');
       rethrow;
     }
   }
@@ -243,8 +295,9 @@ class SocialNotifier extends AsyncNotifier<SocialState> {
   Future<void> saveDropToJournal(SocialDrop drop) async {
     final user = _supabase.auth.currentUser;
     if (user == null) return;
+    final bookData = drop.bookData;
+    if (bookData == null) return;
     try {
-      final bookData = drop.bookData;
       await _supabase.from('growth_drops').insert({
         'user_id': user.id,
         'drop_date': DateTime.now().toIso8601String().split('T')[0],

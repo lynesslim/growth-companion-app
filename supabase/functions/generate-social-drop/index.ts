@@ -14,16 +14,27 @@ serve(async (req) => {
   }
 
   try {
-    const { sender_id, recipient_id } = await req.json()
-    if (!sender_id || !recipient_id) throw new Error('Missing sender_id or recipient_id')
+    const { drop_id } = await req.json()
+    if (!drop_id) throw new Error('Missing drop_id')
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
 
-    // 1. Fetch Recipient's Profile
+    // 1. Fetch the social drop to get recipient
+    const { data: dropData, error: dropError } = await supabaseAdmin
+      .from('social_drops')
+      .select('sender_id, recipient_id')
+      .eq('id', drop_id)
+      .single()
+
+    if (dropError || !dropData) throw new Error('Failed to fetch social drop')
+
+    const { recipient_id } = dropData
+
+    // 2. Fetch Recipient's Profile
     const { data: recipientData, error: recipientError } = await supabaseAdmin
-      .from('users')
+      .from('profiles')
       .select('onboarding_profile')
       .eq('id', recipient_id)
       .single()
@@ -31,7 +42,7 @@ serve(async (req) => {
     if (recipientError || !recipientData) throw new Error('Failed to fetch recipient profile')
     const onboardingProfile = recipientData.onboarding_profile || {}
 
-    // 2. Fetch Prompt
+    // 3. Fetch Prompt
     const { data: promptData, error: promptError } = await supabaseAdmin
       .from('ai_prompts')
       .select('prompt_text')
@@ -40,7 +51,7 @@ serve(async (req) => {
       
     if (promptError) throw new Error('Failed to fetch prompt')
 
-    // 3. Call OpenAI
+    // 4. Call OpenAI
     const apiKey = Deno.env.get('OPENAI_API_KEY')
     if (!apiKey) throw new Error('Missing OPENAI_API_KEY')
     
@@ -63,55 +74,16 @@ serve(async (req) => {
 
     const resultStr = response.choices[0].message?.content
     const resultJson = JSON.parse(resultStr || '{}')
-    
-    const today = new Date().toISOString().split('T')[0]
 
-    // 4. Insert into social_drops table
-    const { data: dropData, error: insertError } = await supabaseAdmin
+    // 5. Update the social_drop with generated book_data
+    const { error: updateError } = await supabaseAdmin
       .from('social_drops')
-      .insert({
-        sender_id: sender_id,
-        recipient_id: recipient_id,
-        drop_date: today,
-        book_data: resultJson
-      })
-      .select()
-      .single()
+      .update({ book_data: resultJson })
+      .eq('id', drop_id)
 
-    if (insertError) throw new Error('Failed to insert social drop: ' + insertError.message)
+    if (updateError) throw new Error('Failed to update social drop: ' + updateError.message)
 
-    // 5. Update Streak
-    const { data: streakData } = await supabaseAdmin
-      .from('social_streaks')
-      .select('*')
-      .or(`and(user_id_1.eq.${sender_id},user_id_2.eq.${recipient_id}),and(user_id_1.eq.${recipient_id},user_id_2.eq.${sender_id})`)
-      .single()
-
-    if (streakData) {
-        let isUser1 = streakData.user_id_1 === sender_id;
-        let updatePayload: any = {};
-        if (isUser1) {
-            updatePayload.last_shared_date_1 = today;
-            if (streakData.last_shared_date_2 === today) {
-                updatePayload.current_streak = (streakData.current_streak || 0) + 1;
-            }
-        } else {
-            updatePayload.last_shared_date_2 = today;
-            if (streakData.last_shared_date_1 === today) {
-                updatePayload.current_streak = (streakData.current_streak || 0) + 1;
-            }
-        }
-        await supabaseAdmin.from('social_streaks').update(updatePayload).eq('id', streakData.id)
-    } else {
-        await supabaseAdmin.from('social_streaks').insert({
-            user_id_1: sender_id,
-            user_id_2: recipient_id,
-            last_shared_date_1: today,
-            current_streak: 0
-        })
-    }
-
-    return new Response(JSON.stringify({ success: true, data: dropData }), {
+    return new Response(JSON.stringify({ success: true, data: resultJson }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })

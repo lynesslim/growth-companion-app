@@ -570,3 +570,24 @@ Please review the updated Phase 8 plan above. Once approved, I'll dive in and be
 > [!IMPORTANT]
 > 1. **Deep Linking Infrastructure:** Do you want to use Firebase Dynamic Links (deprecated soon but still functional), Supabase Deep Links, or a service like Branch.io to ensure the WhatsApp invite link reliably survives the App Store installation process? (Supabase Deep links are easiest if we keep the stack consolidated).
 > 2. **Daily Drop Conflict:** If a user receives 3 social drops from 3 different friends in one day, does this replace their standard daily "Growth Drop", or do they get to read all 4 books that day?
+
+## Phase 9: Refinements & WhatsApp Invites
+
+### WhatsApp Invite Integration (Streak Complete Screen)
+**Goal Description:** 
+When the user finishes a book and reaches the Streak Complete screen, they can tap "Share Book with Friend". This opens a bottom sheet allowing them to send the exact book they just read to any existing friend. We will add a new "Invite via WhatsApp" button at the bottom of this friend picker to allow users to easily invite new friends outside the app.
+
+#### Proposed Changes
+- **`streak_complete_screen.dart`**: Add an "Invite via WhatsApp" button to the friend picker that generates a deep link using `url_launcher` or `share_plus`.
+
+### Deferred Blind Box Generation
+**Goal Description:** 
+Currently, the blind box is generated using AI the moment it is sent. It should be generated when the *recipient opens it* instead, so it can be tailored to the recipient's goals/profile dynamically at the time of opening. 
+
+#### Proposed Changes
+- **`social_drop.dart`**: Make `bookData` nullable. If empty `{}`, map it to `null`.
+- **`social_provider.dart`**: 
+  - `sendDrop(friendId)` inserts instantly into `social_drops` with empty `book_data` and handles streak increment directly.
+  - `openBlindBox(dropId)` calls the edge function to generate the tailored book upon opening.
+- **`generate-social-drop` edge function**: Change to expect `{ drop_id }`, fetch recipient profile, generate book, and update `social_drops`. Remove streak increment logic here.
+- **UI (`social_screen.dart` / `social_drops_section.dart`)**: Show loading spinner when tapping an unopened (null) blind box while calling `openBlindBox`.

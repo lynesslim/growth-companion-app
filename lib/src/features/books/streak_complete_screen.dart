@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../core/app_colors.dart';
 import '../../providers/user_provider.dart';
 import '../../providers/social_provider.dart';
@@ -128,6 +129,10 @@ class StreakCompleteScreen extends ConsumerWidget {
     );
   }
 
+  void _inviteViaWhatsApp(BuildContext context, GrowthDrop bookData) {
+    Share.share('I just read "${bookData.bookTitle}" by ${bookData.bookAuthor} and it was amazing! Try the app and let\'s share books daily.');
+  }
+
   void _showFriendPicker(BuildContext context, WidgetRef ref, GrowthDrop bookData) {
     final socialState = ref.read(socialProvider).valueOrNull;
     final friends = socialState?.acceptedFriends ?? [];
@@ -197,6 +202,24 @@ class StreakCompleteScreen extends ConsumerWidget {
                     },
                   ),
                 ),
+              if (friends.isNotEmpty) const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _inviteViaWhatsApp(context, bookData);
+                  },
+                  icon: const Icon(Icons.chat_rounded, size: 18),
+                  label: const Text('Invite via WhatsApp'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primaryLight),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
+              ),
             ],
           ),
         ),

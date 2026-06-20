@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../core/app_colors.dart';
 import '../../domain/models/friend.dart';
+import '../../domain/models/growth_drop.dart';
 import '../../domain/models/social_streak.dart';
 import '../../providers/journal_provider.dart';
 import '../../providers/social_provider.dart';
@@ -21,6 +22,7 @@ class SocialScreen extends ConsumerStatefulWidget {
 class _SocialScreenState extends ConsumerState<SocialScreen> {
   final _searchController = TextEditingController();
   Timer? _debounce;
+  String? _openingDropId;
 
   @override
   void dispose() {
@@ -233,31 +235,69 @@ class _SocialScreenState extends ConsumerState<SocialScreen> {
   }
 
   Widget _buildDropCard(dynamic drop) {
+    final isOpening = _openingDropId == drop.id;
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       elevation: 2,
       child: ListTile(
         contentPadding: const EdgeInsets.all(16),
-        leading: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: AppColors.primaryLight.withOpacity(0.2),
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(Icons.card_giftcard, color: AppColors.primary),
-        ),
+        leading: isOpening
+            ? const SizedBox(
+                width: 44, height: 44,
+                child: Center(child: CircularProgressIndicator(strokeWidth: 2)))
+            : Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.card_giftcard, color: AppColors.primary),
+              ),
         title: Text('From ${drop.senderProfile?.name ?? "A Friend"}', style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(drop.isOpened ? 'Opened' : 'Tap to open your blind box!'),
+        subtitle: Text(isOpening ? 'Generating your book...' : drop.isOpened ? 'Opened' : 'Tap to open your blind box!'),
         trailing: drop.isOpened ? const Icon(Icons.check_circle, color: AppColors.primary) : const Icon(Icons.chevron_right),
-        onTap: () {
-          if (!drop.isOpened) {
-            ref.read(socialProvider.notifier).markDropOpened(drop.id);
-          }
-          context.push('/book', extra: drop.bookData);
-        },
+        onTap: () => _openDrop(drop),
       ),
     );
+  }
+
+  Future<void> _openDrop(dynamic drop) async {
+    if (drop.isOpened) {
+      if (drop.bookData != null) context.push('/book', extra: drop.bookData);
+      return;
+    }
+    if (drop.bookData != null) {
+      ref.read(socialProvider.notifier).markDropOpened(drop.id);
+      context.push('/book', extra: drop.bookData);
+      return;
+    }
+    setState(() => _openingDropId = drop.id);
+    try {
+      final bookData = await ref.read(socialProvider.notifier).openBlindBox(drop.id);
+      if (mounted) {
+        setState(() => _openingDropId = null);
+        context.push('/book', extra: GrowthDrop.fromJson({
+          'id': drop.id,
+          'date': drop.dropDate.toIso8601String(),
+          'focusArea': 'Social Drop',
+          'bookTitle': bookData['bookTitle'] ?? '',
+          'bookAuthor': bookData['bookAuthor'] ?? '',
+          'whatItsAbout': bookData['whatItsAbout'] ?? '',
+          'lessons': bookData['lessons'] ?? [],
+          'summary': bookData['summary'] ?? '',
+          'isRead': true,
+          'giftedBy': drop.senderProfile?.name,
+        }));
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _openingDropId = null);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to generate: $e')),
+        );
+      }
+    }
   }
 
   Widget _buildFriendCard(dynamic friend, dynamic streak, String? currentUserId, bool isPending) {

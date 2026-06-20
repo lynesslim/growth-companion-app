@@ -38,6 +38,7 @@ CREATE TABLE profiles (
 -- Enable RLS (Row Level Security) so users can only read/update their own profile
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can view own profile" ON profiles FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Users can view all profiles" ON profiles FOR SELECT USING (auth.role() = 'authenticated');
 CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (auth.uid() = id);
 
 -- Trigger to automatically create a profile when a new user signs up
@@ -85,6 +86,7 @@ CREATE TABLE growth_drops (
 
 ALTER TABLE growth_drops ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users view own growth drops" ON growth_drops FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users insert own growth drops" ON growth_drops FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users update own growth drops" ON growth_drops FOR UPDATE USING (auth.uid() = user_id);
 
 

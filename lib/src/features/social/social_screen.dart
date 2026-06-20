@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../core/app_colors.dart';
 import '../../domain/models/friend.dart';
@@ -280,26 +281,35 @@ class _SocialScreenState extends ConsumerState<SocialScreen> {
     
     try {
       final bookData = await ref.read(socialProvider.notifier).openBlindBox(drop.id);
-      if (mounted) {
-        setState(() => _openingFriendId = null);
-        Navigator.of(context).pop(); // Close modal
-        context.push('/book', extra: GrowthDrop.fromJson({
-          'id': drop.id,
-          'date': drop.dropDate.toIso8601String(),
-          'focusArea': 'Social Drop',
-          'bookTitle': bookData['bookTitle'] ?? '',
-          'bookAuthor': bookData['bookAuthor'] ?? '',
-          'whatItsAbout': bookData['whatItsAbout'] ?? '',
-          'lessons': bookData['lessons'] ?? [],
-          'summary': bookData['summary'] ?? '',
-          'isRead': true,
-          'giftedBy': drop.senderProfile?.name,
-        }));
-      }
+      if (!mounted) return;
+      
+      // Construct the object first so if it throws, we haven't popped yet
+      final lessonsData = bookData['lessons'];
+      final List<String> parsedLessons = lessonsData is List
+          ? lessonsData.map((e) => e.toString()).toList()
+          : (lessonsData != null ? [lessonsData.toString()] : []);
+
+      final newDrop = GrowthDrop.fromJson({
+        'id': drop.id,
+        'date': drop.dropDate.toIso8601String(),
+        'focusArea': 'Social Drop',
+        'bookTitle': bookData['bookTitle'] ?? '',
+        'bookAuthor': bookData['bookAuthor'] ?? '',
+        'whatItsAbout': bookData['whatItsAbout'] ?? '',
+        'lessons': parsedLessons,
+        'summary': bookData['summary'] ?? '',
+        'isRead': true,
+        'giftedBy': drop.senderProfile?.name,
+      });
+
+      setState(() => _openingFriendId = null);
+      Navigator.of(context, rootNavigator: true).pop(); // Close modal
+      context.push('/book', extra: newDrop);
+      
     } catch (e) {
       if (mounted) {
         setState(() => _openingFriendId = null);
-        Navigator.of(context).pop(); // Close modal
+        Navigator.of(context, rootNavigator: true).pop(); // Close modal
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to generate: $e')),
         );

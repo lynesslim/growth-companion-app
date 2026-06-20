@@ -158,15 +158,23 @@ class SocialNotifier extends AsyncNotifier<SocialState> {
 
       if (streakData != null) {
         final isUser1 = streakData['user_id_1'] == user.id;
+        final myLastDate = isUser1 ? streakData['last_shared_date_1'] : streakData['last_shared_date_2'];
+        final otherDate = isUser1 ? streakData['last_shared_date_2'] : streakData['last_shared_date_1'];
+
+        if (myLastDate == today) {
+          ref.invalidateSelf();
+          return; // already sent today, no double-count
+        }
+
         final updatePayload = <String, dynamic>{};
         if (isUser1) {
           updatePayload['last_shared_date_1'] = today;
-          if (streakData['last_shared_date_2'] == today) {
+          if (otherDate == today) {
             updatePayload['current_streak'] = (streakData['current_streak'] as int? ?? 0) + 1;
           }
         } else {
           updatePayload['last_shared_date_2'] = today;
-          if (streakData['last_shared_date_1'] == today) {
+          if (otherDate == today) {
             updatePayload['current_streak'] = (streakData['current_streak'] as int? ?? 0) + 1;
           }
         }

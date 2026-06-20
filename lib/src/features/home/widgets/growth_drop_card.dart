@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supa;
 import '../../../core/app_colors.dart';
 import '../../../providers/growth_drop_provider.dart';
+import '../../../providers/user_provider.dart';
 import '../../../providers/weekly_goal_provider.dart';
 
 class GrowthDropCard extends ConsumerStatefulWidget {
@@ -17,16 +18,15 @@ class _GrowthDropCardState extends ConsumerState<GrowthDropCard> {
   bool _generating = false;
 
   Future<void> _generateToday() async {
-    final goal = ref.read(currentWeeklyGoalProvider).valueOrNull;
-    if (goal == null) return;
+    final user = ref.read(userProvider).valueOrNull;
+    if (user == null) return;
     setState(() => _generating = true);
     try {
       await supa.Supabase.instance.client.functions.invoke(
         'generate-growth-drop',
         body: {
-          'user_id': goal.userId,
-          'weekly_intent': goal.intent,
-          'weekly_struggle': goal.struggle,
+          'user_id': user.id,
+          'onboarding_profile': user.onboardingProfile,
           'drop_date': DateTime.now().toIso8601String().split('T')[0],
         },
       );

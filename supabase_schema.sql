@@ -33,8 +33,11 @@ CREATE TABLE profiles (
   last_active_date DATE, -- last date a growth drop was completed (streak tracking)
   selected_companion_id UUID REFERENCES companions(id),
   onboarding_profile JSONB, -- JSONB is perfect here instead of 5 different tables
+  is_admin BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- Run after table exists: ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE;
 
 -- Enable RLS (Row Level Security) so users can only read/update their own profile
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;

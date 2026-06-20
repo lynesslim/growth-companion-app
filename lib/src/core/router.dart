@@ -9,7 +9,6 @@ import '../features/home/home_screen.dart';
 import '../features/journal/journal_screen.dart';
 import '../features/profile/profile_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
-import '../features/focus/weekly_focus_screen.dart';
 import '../features/books/book_flip_screen.dart';
 import '../features/books/congrats_screen.dart';
 import '../features/books/streak_complete_screen.dart';
@@ -56,7 +55,6 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         final needsOnboarding = user == null || user.onboardingProfile.isEmpty;
         final onboardingRoutes = [
           '/onboarding',
-          '/weekly-focus',
         ];
         final isCurrentlyOnboarding = onboardingRoutes.contains(state.matchedLocation) ||
             state.matchedLocation == '/congrats' ||
@@ -98,16 +96,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           senderId: state.uri.queryParameters['sender'] ?? '',
         ),
       ),
-      // Phase 2 flow: Onboarding -> Weekly Focus -> Books -> Congrats -> Home
+      // Phase 2 flow: Onboarding -> Books -> Congrats -> Home
       GoRoute(
         path: '/onboarding',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const OnboardingScreen(),
-      ),
-      GoRoute(
-        path: '/weekly-focus',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const WeeklyFocusScreen(),
       ),
       GoRoute(
         path: '/book',

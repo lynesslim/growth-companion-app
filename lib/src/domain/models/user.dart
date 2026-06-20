@@ -6,6 +6,7 @@ class User {
   final int level;
   final int currentStreak;
   final DateTime? lastDropDate;
+  final bool isAdmin;
 
   const User({
     required this.id,
@@ -15,6 +16,7 @@ class User {
     this.level = 1,
     this.currentStreak = 0,
     this.lastDropDate,
+    this.isAdmin = false,
   });
 
   User copyWith({
@@ -25,6 +27,7 @@ class User {
     int? level,
     int? currentStreak,
     DateTime? lastDropDate,
+    bool? isAdmin,
   }) {
     return User(
       id: id ?? this.id,
@@ -34,6 +37,7 @@ class User {
       level: level ?? this.level,
       currentStreak: currentStreak ?? this.currentStreak,
       lastDropDate: lastDropDate ?? this.lastDropDate,
+      isAdmin: isAdmin ?? this.isAdmin,
     );
   }
 
@@ -45,6 +49,7 @@ class User {
         'level': level,
         'current_streak': currentStreak,
         'last_active_date': lastDropDate?.toIso8601String().split('T')[0],
+        'is_admin': isAdmin,
       };
 
   factory User.fromJson(Map<String, dynamic> json) => User(
@@ -59,6 +64,7 @@ class User {
         lastDropDate: json['last_active_date'] != null
             ? DateTime.parse(json['last_active_date'] as String)
             : null,
+        isAdmin: (json['is_admin'] as bool?) ?? false,
       );
 
   @override
@@ -69,8 +75,9 @@ class User {
           name == other.name &&
           currentXp == other.currentXp &&
           level == other.level &&
-          currentStreak == other.currentStreak;
+          currentStreak == other.currentStreak &&
+          isAdmin == other.isAdmin;
 
   @override
-  int get hashCode => Object.hash(id, name, currentXp, level, currentStreak);
+  int get hashCode => Object.hash(id, name, currentXp, level, currentStreak, isAdmin);
 }

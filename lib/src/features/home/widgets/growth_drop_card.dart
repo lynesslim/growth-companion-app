@@ -5,7 +5,6 @@ import 'package:supabase_flutter/supabase_flutter.dart' as supa;
 import '../../../core/app_colors.dart';
 import '../../../providers/growth_drop_provider.dart';
 import '../../../providers/user_provider.dart';
-import '../../../providers/weekly_goal_provider.dart';
 
 class GrowthDropCard extends ConsumerStatefulWidget {
   const GrowthDropCard({super.key});
@@ -18,13 +17,12 @@ class _GrowthDropCardState extends ConsumerState<GrowthDropCard> {
   bool _generating = false;
 
   Future<void> _generateToday() async {
-    final goal = ref.read(currentWeeklyGoalProvider).valueOrNull;
     final user = ref.read(userProvider).valueOrNull;
-    if (goal == null && user == null) {
+    if (user == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Set a weekly focus first'),
+            content: Text('Please complete onboarding first'),
             backgroundColor: AppColors.error,
             behavior: SnackBarBehavior.floating,
           ),
@@ -35,12 +33,10 @@ class _GrowthDropCardState extends ConsumerState<GrowthDropCard> {
     setState(() => _generating = true);
     try {
       final body = <String, dynamic>{
-        'user_id': user?.id ?? goal!.userId,
+        'user_id': user.id,
         'drop_date': DateTime.now().toIso8601String().split('T')[0],
+        'onboarding_profile': user.onboardingProfile,
       };
-      if (user != null) {
-        body['onboarding_profile'] = user.onboardingProfile;
-      }
       await supa.Supabase.instance.client.functions.invoke(
         'generate-growth-drop',
         body: body,
@@ -66,7 +62,7 @@ class _GrowthDropCardState extends ConsumerState<GrowthDropCard> {
   @override
   Widget build(BuildContext context) {
     final drop = ref.watch(growthDropProvider);
-    final goal = ref.watch(currentWeeklyGoalProvider);
+    final user = ref.watch(userProvider).valueOrNull;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -201,9 +197,47 @@ class _GrowthDropCardState extends ConsumerState<GrowthDropCard> {
                 ),
               ),
             ),
-          ] else if (goal.valueOrNull != null) ...[
+            if (user?.isAdmin == true) ...[
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: GestureDetector(
+                  onTap: _generating ? null : _generateToday,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
+                      color: AppColors.error.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
+                    ),
+                    child: _generating
+                        ? const SizedBox(
+                            height: 18,
+                            width: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.refresh_rounded, size: 16, color: AppColors.error),
+                              SizedBox(width: 6),
+                              Text(
+                                'Regenerate Drop (Admin)',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.error,
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
+              ),
+            ],
+          ] else ...[
             const Text(
-              'You have a weekly goal set. Generate today\'s personalised drop!',
+              'Ready for your next drop?',
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w400,
@@ -240,53 +274,6 @@ class _GrowthDropCardState extends ConsumerState<GrowthDropCard> {
                       SizedBox(width: 6),
                       Icon(
                         Icons.auto_awesome_rounded,
-                        color: AppColors.white,
-                        size: 18,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ] else ...[
-            const Text(
-              'Ready for your next drop?',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w400,
-                color: AppColors.grey600,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: GestureDetector(
-                onTap: () => context.push('/weekly-focus'),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppColors.primary, AppColors.pinkLight],
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Set Weekly Focus',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.white,
-                        ),
-                      ),
-                      SizedBox(width: 6),
-                      Icon(
-                        Icons.arrow_forward_rounded,
                         color: AppColors.white,
                         size: 18,
                       ),

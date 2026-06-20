@@ -5,7 +5,6 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/app_colors.dart';
 import '../../providers/user_provider.dart';
 import '../../providers/journal_provider.dart';
-import '../../providers/weekly_goal_provider.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -14,7 +13,6 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(userProvider).valueOrNull;
     final drops = ref.watch(journalProvider).valueOrNull ?? [];
-    final goal = ref.watch(currentWeeklyGoalProvider).valueOrNull;
 
     final streak = user?.currentStreak ?? 0;
     final xp = user?.currentXp ?? 0;
@@ -134,74 +132,6 @@ class ProfileScreen extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 28),
-              // Weekly focus card
-              if (goal != null) ...[
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: AppColors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.06),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.track_changes_rounded,
-                              color: AppColors.primary, size: 20),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'Weekly Focus',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.grey800,
-                            ),
-                          ),
-                          const Spacer(),
-                          GestureDetector(
-                            onTap: () => context.push('/weekly-focus'),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Text(
-                                'Edit',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        goal.intent.isNotEmpty ? goal.intent : goal.focusArea,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: AppColors.grey600,
-                          height: 1.4,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 28),
-              ],
               // Achievements
               Text(
                 'Achievements',

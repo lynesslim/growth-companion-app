@@ -144,17 +144,26 @@ class SocialNotifier extends AsyncNotifier<SocialState> {
     try {
       final today = DateTime.now().toIso8601String().split('T')[0];
 
-      // 1. Client-side check
-      final existingDrop = await _supabase
-          .from('social_drops')
-          .select('id')
-          .eq('sender_id', user.id)
-          .eq('recipient_id', friendId)
-          .eq('drop_date', today)
+      // 1. Client-side check (skip for admins)
+      final profile = await _supabase
+          .from('profiles')
+          .select('is_admin')
+          .eq('id', user.id)
           .maybeSingle();
+      final isAdmin = profile?['is_admin'] == true;
 
-      if (existingDrop != null) {
-        throw Exception('You already sent a drop to this friend today!');
+      if (!isAdmin) {
+        final existingDrop = await _supabase
+            .from('social_drops')
+            .select('id')
+            .eq('sender_id', user.id)
+            .eq('recipient_id', friendId)
+            .eq('drop_date', today)
+            .maybeSingle();
+
+        if (existingDrop != null) {
+          throw Exception('You already sent a drop to this friend today!');
+        }
       }
 
       // 2. Insert drop
@@ -166,8 +175,8 @@ class SocialNotifier extends AsyncNotifier<SocialState> {
           'book_data': {},
         });
       } catch (e) {
-        // Catch DB unique constraint violation gracefully
-        if (e.toString().contains('23505') || e.toString().contains('unique_daily_drop')) {
+        // Skip DB constraint for admins; otherwise show friendly error
+        if (!isAdmin && (e.toString().contains('23505') || e.toString().contains('unique_daily_drop'))) {
           throw Exception('You already sent a drop to this friend today!');
         }
         rethrow;

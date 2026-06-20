@@ -48,6 +48,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         'recipient_id': userId,
         'is_opened': false,
         'drop_date': DateTime.now().toIso8601String().split('T')[0],
+        'book_data': {},
       });
       ref.invalidate(socialProvider);
       if (context.mounted) {

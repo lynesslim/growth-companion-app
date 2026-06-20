@@ -547,13 +547,15 @@ class _MotivationScreen extends StatelessWidget {
               style: TextStyle(fontSize: 15, color: AppColors.grey500)),
           const SizedBox(height: 24),
           Expanded(
-            child: ListView.separated(
-              itemCount: _quotes.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 16),
-              itemBuilder: (_, i) => QuoteCard(
-                quote: _quotes[i],
-                answer: answers[i],
-                onAnswer: (v) => onAnswer(i, v),
+            child: Scrollbar(
+              child: ListView.separated(
+                itemCount: _quotes.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 16),
+                itemBuilder: (_, i) => QuoteCard(
+                  quote: _quotes[i],
+                  answer: answers[i],
+                  onAnswer: (v) => onAnswer(i, v),
+                ),
               ),
             ),
           ),

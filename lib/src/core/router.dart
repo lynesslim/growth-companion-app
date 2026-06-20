@@ -133,7 +133,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/streak',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const StreakCompleteScreen(),
+        builder: (context, state) => StreakCompleteScreen(book: state.extra as GrowthDrop?),
       ),
       GoRoute(
         path: '/congrats',

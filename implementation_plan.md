@@ -150,6 +150,31 @@ This document outlines the comprehensive technical and execution plan for bringi
 - **Execution Strategy:**
   - I will systematically go through `lib/src/data/repositories` and `lib/src/providers` to remove any `Future.delayed` mock calls, replacing them with strongly-typed `Supabase.instance.client` queries.
 
+### Phase 4.9: OpenAI Integration (Generating Dynamic Growth Drops)
+
+> [!IMPORTANT]
+> **OpenAI Edge Function Architecture:**
+> We will completely remove the hardcoded `book_data.dart` and replace it with a dynamic, AI-powered Growth Drop engine. When the user finishes the Weekly Focus screen, the app will call a Supabase Edge Function to generate the week's book.
+
+## User Review Required
+**Edge Function Generation Strategy:** Since the goal is **1 book per day** based on the Weekly Focus, the most reliable and scalable way to build this is:
+1. **Sunday/Monday:** User sets their Weekly Focus (`intent` and `struggle`).
+2. **Daily Login:** Every day when the user opens the app, it checks if a Growth Drop exists for *today*.
+3. **On-Demand Generation:** If none exists, it calls the OpenAI Edge Function to instantly generate **1 personalized book** and **micro-action quests** for that specific day, guided by the active Weekly Focus.
+
+*Are you approved to proceed with this daily, on-demand AI generation approach?*
+
+- **Proposed Fix (Supabase Edge Function):**
+  - Create a new table `ai_prompts` in Supabase with a row for `growth_drop_prompt`. This allows you to edit the exact GPT prompt at any time without deploying code.
+  - Create a Supabase Edge Function (`generate-growth-drop`) written in Deno.
+  - The function will read your prompt from `ai_prompts`, inject the user's `onboarding_profile`, `weekly_intent`, and `weekly_struggle`.
+  - It will call the OpenAI API (GPT-4o) and ask it to generate: 1 Book Title, Author, Summary, 3 Lessons, and **3 Micro-Action Quests**.
+  - The function will save the JSON result directly into the user's `growth_drops` table for the current `drop_date`.
+- **Proposed Fix (Flutter UI):**
+  - Update `growth_drop_provider.dart` to fetch the Growth Drop for `DateTime.now()`. If it's missing, show a loading state and trigger the Edge Function.
+  - Update `book_flip_screen.dart` and `action_plans_screen.dart` to read directly from this daily Growth Drop.
+  - Ensure the "Add to Quests" button reliably triggers the GPT-generated micro-actions.
+
 ### Phase 5: Monetization & Analytics
 
 - **RevenueCat Integration:**
@@ -200,3 +225,39 @@ To launch the app on an iOS simulator and test the new UI:
 ### Stage 4: Dependencies
 *Target:* `pubspec.yaml`
 * **Dependencies**: Review installed packages. Remove unused or trivially replaceable packages.
+
+---
+
+### Phase 4.10: Dashboard UX Refactor & Empty States
+
+> [!IMPORTANT]
+> **User Review Required:** Please review these proposed UX changes to the dashboard empty states. Do you approve the messaging?
+
+**Issues Identified:**
+1. **Growth Drop Card Empty State:** In the Dashboard, it shows blank text when there's no drop.
+2. **Quest Log Card Empty State:** Shows a progress bar and "0 of 0 quests completed" when no quests exist.
+3. **Obsolete Screens:** `growth_drop_screen.dart` is a legacy file that was replaced by `book_flip_screen.dart`, but it hasn't been deleted yet.
+
+**Execution Strategy:**
+- **[MODIFY] `growth_drop_card.dart`:** If `drop.valueOrNull == null`, render a beautiful Empty State with a "Ready for your next drop?" title and a "Set Weekly Focus" button that routes to `/weekly-focus`. If not null, update the button to route to `/book` instead of the old `/growth-drop`.
+- **[MODIFY] `quest_log_card.dart`:** If `quests.isEmpty`, hide the progress bar and show an empty state message: "Read your daily book drop to discover and add new micro-actions."
+- **[DELETE] `growth_drop_screen.dart`:** Completely remove this legacy screen.
+- **[MODIFY] `router.dart`:** Remove the obsolete `/growth-drop` route.
+
+---
+
+### Phase 4.11: Weekly Goal Persistence
+
+> [!IMPORTANT]
+> **User Review Required:** Do you approve the architecture for saving and re-using the Weekly Goal so users only set it once a week?
+
+**Issues Identified:**
+1. **Goal Amnesia:** The `WeeklyFocusScreen` currently sends the user's `intent` and `struggle` directly to the AI Edge Function without saving them. Thus, the app forgets the goal the next day.
+2. **Repetitive UI:** Users are forced to re-enter their intent and struggle every single day to generate a new book.
+
+**Execution Strategy:**
+- **[DATABASE] Modify `weekly_goals` table:** Add `intent` and `struggle` columns to the `weekly_goals` table in Supabase so we can store the two-part focus properly.
+- **[MODIFY] `WeeklyFocusScreen`:** When the user completes the flow, it will now save a new `WeeklyGoal` to the database using `TasksRepository.setWeeklyGoal()`.
+- **[MODIFY] `GrowthDropCard` Empty States:** 
+  - If the user has **no active Weekly Goal**, show the "Set Weekly Focus" button (routes to `/weekly-focus`).
+  - If the user **has an active Weekly Goal** but no drop for today, show a "Generate Today's Drop" button. Clicking this will trigger the Edge Function automatically using the saved `intent` and `struggle` without making them fill out the form again!

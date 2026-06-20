@@ -13,7 +13,6 @@ import '../features/onboarding/profile_created_screen.dart';
 import '../features/books/action_plans_screen.dart';
 import '../features/books/book_flip_screen.dart';
 import '../features/books/congrats_screen.dart';
-import '../features/growth/growth_drop_screen.dart';
 import '../features/growth/quest_detail_screen.dart';
 import '../providers/auth_provider.dart';
 import '../providers/user_provider.dart';
@@ -60,7 +59,8 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         ];
         final isCurrentlyOnboarding = onboardingRoutes.contains(state.matchedLocation) ||
             state.matchedLocation == '/congrats' ||
-            state.matchedLocation.startsWith('/book/');
+            state.matchedLocation == '/book' ||
+            state.matchedLocation == '/action-plans';
         
         if (needsOnboarding && !isCurrentlyOnboarding) {
           return '/onboarding';
@@ -104,33 +104,19 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const ProfileCreatedScreen(),
       ),
       GoRoute(
-        path: '/book/:id',
+        path: '/book',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) {
-          final id = int.tryParse(state.pathParameters['id'] ?? '0') ?? 0;
-          return BookFlipScreen(bookIndex: id);
-        },
+        builder: (context, state) => const BookFlipScreen(),
       ),
       GoRoute(
         path: '/action-plans',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) {
-          final bookIndex = int.tryParse(
-                state.uri.queryParameters['bookIndex'] ?? '0',
-              ) ??
-              0;
-          return ActionPlansScreen(bookIndex: bookIndex);
-        },
+        builder: (context, state) => const ActionPlansScreen(),
       ),
       GoRoute(
         path: '/congrats',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const CongratsScreen(),
-      ),
-      GoRoute(
-        path: '/growth-drop',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const GrowthDropScreen(),
       ),
       GoRoute(
         path: '/quest/:id',

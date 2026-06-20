@@ -12,6 +12,7 @@ class GrowthDrop {
   final String firstChapter;
   final String dailyAction;
   final String dailyActionDuration;
+  final List<String> quests;
 
   const GrowthDrop({
     required this.id,
@@ -27,6 +28,7 @@ class GrowthDrop {
     required this.firstChapter,
     required this.dailyAction,
     required this.dailyActionDuration,
+    this.quests = const [],
   });
 
   Map<String, dynamic> toJson() => {
@@ -43,6 +45,7 @@ class GrowthDrop {
         'firstChapter': firstChapter,
         'dailyAction': dailyAction,
         'dailyActionDuration': dailyActionDuration,
+        'quests': quests,
       };
 
   factory GrowthDrop.fromJson(Map<String, dynamic> json) => GrowthDrop(
@@ -59,5 +62,6 @@ class GrowthDrop {
         firstChapter: json['firstChapter'] as String,
         dailyAction: json['dailyAction'] as String,
         dailyActionDuration: json['dailyActionDuration'] as String,
+        quests: (json['quests'] as List<dynamic>?)?.cast<String>() ?? [],
       );
 }

@@ -60,6 +60,8 @@ class TasksRepository {
         .select()
         .eq('user_id', _userId)
         .eq('status', 'active')
+        .order('created_at', ascending: false)
+        .limit(1)
         .maybeSingle();
     if (data == null) return null;
     return _weeklyGoalFromSupabase(data);
@@ -71,6 +73,8 @@ class TasksRepository {
         .insert({
           'user_id': _userId,
           'focus_area': goal.focusArea,
+          'intent': goal.intent,
+          'struggle': goal.struggle,
           'status': goal.status,
           'start_date': goal.startDate.toIso8601String(),
           'end_date': goal.endDate?.toIso8601String(),
@@ -98,6 +102,8 @@ class TasksRepository {
         id: json['id'] as String,
         userId: json['user_id'] as String,
         focusArea: json['focus_area'] as String,
+        intent: json['intent'] as String? ?? '',
+        struggle: json['struggle'] as String? ?? '',
         status: json['status'] as String? ?? 'active',
         startDate: DateTime.parse(json['start_date'] as String),
         endDate: json['end_date'] != null

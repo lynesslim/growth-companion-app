@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/app_colors.dart';
+import '../../domain/models/growth_drop.dart';
+import '../../providers/growth_drop_provider.dart';
 import '../../utils/haptic_utils.dart';
-import 'book_data.dart';
 
-class BookFlipScreen extends StatefulWidget {
-  const BookFlipScreen({super.key, required this.bookIndex});
-
-  final int bookIndex;
+class BookFlipScreen extends ConsumerStatefulWidget {
+  const BookFlipScreen({super.key});
 
   @override
-  State<BookFlipScreen> createState() => _BookFlipScreenState();
+  ConsumerState<BookFlipScreen> createState() => _BookFlipScreenState();
 }
 
-class _BookFlipScreenState extends State<BookFlipScreen> {
+class _BookFlipScreenState extends ConsumerState<BookFlipScreen> {
   int _currentPage = 0;
   bool _isAnimating = false;
   final _pageController = PageController();
@@ -28,13 +28,11 @@ class _BookFlipScreenState extends State<BookFlipScreen> {
     'First Chapter',
   ];
 
-  BookData get _book => books[widget.bookIndex];
-
-  void _nextPage() {
+  void _nextPage(GrowthDrop book) {
     HapticUtils.light();
     if (_isAnimating) return;
     if (_currentPage >= _pageNames.length - 1) {
-      context.push('/action-plans?bookIndex=${widget.bookIndex}');
+      context.push('/action-plans');
       return;
     }
     _isAnimating = true;
@@ -62,7 +60,39 @@ class _BookFlipScreenState extends State<BookFlipScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final book = _book;
+    final dropAsync = ref.watch(growthDropProvider);
+
+    return dropAsync.when(
+      loading: () => const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, _) => Scaffold(
+        body: Center(child: Text('Something went wrong: $e')),
+      ),
+      data: (drop) {
+        if (drop == null) {
+          return Scaffold(
+            body: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('No growth drop for today.'),
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: () => context.push('/weekly-focus'),
+                    child: const Text('Set your weekly focus'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        return _buildBookUI(drop);
+      },
+    );
+  }
+
+  Widget _buildBookUI(GrowthDrop book) {
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -157,25 +187,22 @@ class _BookFlipScreenState extends State<BookFlipScreen> {
                     ),
                   const Spacer(),
                   GestureDetector(
-                    onTap: _nextPage,
+                    onTap: () => _nextPage(book),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 24,
                         vertical: 14,
                       ),
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            book.gradientBegin,
-                            book.gradientEnd,
-                          ],
+                        gradient: const LinearGradient(
+                          colors: [AppColors.primary, AppColors.pinkLight],
                           begin: Alignment.centerLeft,
                           end: Alignment.centerRight,
                         ),
                         borderRadius: BorderRadius.circular(14),
                         boxShadow: [
                           BoxShadow(
-                            color: book.gradientBegin.withValues(alpha: 0.3),
+                            color: AppColors.primary.withValues(alpha: 0.3),
                             blurRadius: 12,
                             offset: const Offset(0, 4),
                           ),
@@ -219,7 +246,7 @@ class _BookFlipScreenState extends State<BookFlipScreen> {
     );
   }
 
-  Widget _buildPageContent(int index, BookData book) {
+  Widget _buildPageContent(int index, GrowthDrop book) {
     switch (index) {
       case 0:
         return _CoverPage(book: book);
@@ -230,9 +257,7 @@ class _BookFlipScreenState extends State<BookFlipScreen> {
       case 4:
         return _LessonPage(
           lessonNumber: index - 1,
-          lesson: book.lessons[index - 2],
-          gradientBegin: book.gradientBegin,
-          gradientEnd: book.gradientEnd,
+          lesson: book.lessons.length > index - 2 ? book.lessons[index - 2] : '',
         );
       case 5:
         return _FirstChapterPage(book: book);
@@ -243,7 +268,7 @@ class _BookFlipScreenState extends State<BookFlipScreen> {
 }
 
 class _CoverPage extends StatelessWidget {
-  final BookData book;
+  final GrowthDrop book;
 
   const _CoverPage({required this.book});
 
@@ -253,15 +278,15 @@ class _CoverPage extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [book.gradientBegin, book.gradientEnd],
+        gradient: const LinearGradient(
+          colors: [AppColors.primary, AppColors.pinkLight],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: book.gradientBegin.withValues(alpha: 0.3),
+            color: AppColors.primary.withValues(alpha: 0.3),
             blurRadius: 32,
             offset: const Offset(0, 8),
           ),
@@ -278,11 +303,12 @@ class _CoverPage extends StatelessWidget {
               color: AppColors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Icon(book.icon, color: AppColors.white, size: 28),
+            child: const Icon(Icons.menu_book_rounded,
+                color: AppColors.white, size: 28),
           ),
           const SizedBox(height: 32),
           Text(
-            book.tagline,
+            book.focusArea,
             style: TextStyle(
               fontSize: 14,
               color: AppColors.white.withValues(alpha: 0.8),
@@ -292,7 +318,7 @@ class _CoverPage extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            book.title,
+            book.bookTitle,
             style: GoogleFonts.playfairDisplay(
               fontSize: 34,
               fontWeight: FontWeight.w700,
@@ -302,7 +328,7 @@ class _CoverPage extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            book.author,
+            book.bookAuthor,
             style: TextStyle(
               fontSize: 16,
               color: AppColors.white.withValues(alpha: 0.7),
@@ -319,9 +345,9 @@ class _CoverPage extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            book.summary.length > 120
-                ? '${book.summary.substring(0, 120)}...'
-                : book.summary,
+            book.summary,
+            maxLines: 4,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: 14,
               height: 1.4,
@@ -335,7 +361,7 @@ class _CoverPage extends StatelessWidget {
 }
 
 class _SummaryPage extends StatelessWidget {
-  final BookData book;
+  final GrowthDrop book;
 
   const _SummaryPage({required this.book});
 
@@ -402,14 +428,10 @@ class _SummaryPage extends StatelessWidget {
 class _LessonPage extends StatelessWidget {
   final int lessonNumber;
   final String lesson;
-  final Color gradientBegin;
-  final Color gradientEnd;
 
   const _LessonPage({
     required this.lessonNumber,
     required this.lesson,
-    required this.gradientBegin,
-    required this.gradientEnd,
   });
 
   @override
@@ -435,8 +457,8 @@ class _LessonPage extends StatelessWidget {
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [gradientBegin, gradientEnd],
+              gradient: const LinearGradient(
+                colors: [AppColors.primary, AppColors.pinkLight],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -482,7 +504,7 @@ class _LessonPage extends StatelessWidget {
 }
 
 class _FirstChapterPage extends StatelessWidget {
-  final BookData book;
+  final GrowthDrop book;
 
   const _FirstChapterPage({required this.book});
 
@@ -565,8 +587,8 @@ class _FirstChapterPage extends StatelessWidget {
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [book.gradientBegin, book.gradientEnd],
+                      gradient: const LinearGradient(
+                        colors: [AppColors.primary, AppColors.pinkLight],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -611,5 +633,3 @@ class _FirstChapterPage extends StatelessWidget {
     );
   }
 }
-
-

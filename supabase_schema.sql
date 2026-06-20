@@ -18,6 +18,9 @@ INSERT INTO companions (name, type, description, asset_path) VALUES
 ('Terra', 'Earth', 'Grounded and steady, perfect for building habits.', 'assets/companions/terra.riv'),
 ('Zephyr', 'Wind', 'Light and breezy, helps clear your mind.', 'assets/companions/zephyr.riv');
 
+ALTER TABLE companions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Anyone can view companions" ON companions FOR SELECT USING (true);
+
 
 -- 2. Profiles Table
 -- Ties into Supabase's native auth.users table automatically

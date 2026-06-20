@@ -4,34 +4,54 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/app_colors.dart';
 import '../../domain/models/quest.dart';
+import '../../domain/models/growth_drop.dart';
+import '../../providers/growth_drop_provider.dart';
 import '../../providers/quests_provider.dart';
 import '../../utils/haptic_utils.dart';
-import 'book_data.dart';
 
 class ActionPlansScreen extends ConsumerWidget {
-  const ActionPlansScreen({super.key, required this.bookIndex});
-
-  final int bookIndex;
+  const ActionPlansScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final book = books[bookIndex.clamp(0, books.length - 1)];
-    return Scaffold(
-      body: _ActionPlansBody(bookIndex: bookIndex, book: book, ref: ref),
+    final dropAsync = ref.watch(growthDropProvider);
+
+    return dropAsync.when(
+      loading: () => const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, _) => Scaffold(
+        body: Center(child: Text('Something went wrong: $e')),
+      ),
+      data: (drop) {
+        if (drop == null) {
+          return Scaffold(
+            body: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('No growth drop data available.'),
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: () => context.push('/weekly-focus'),
+                    child: const Text('Set your weekly focus'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        return _ActionPlansBody(drop: drop, ref: ref);
+      },
     );
   }
 }
 
 class _ActionPlansBody extends StatefulWidget {
-  final int bookIndex;
-  final BookData book;
+  final GrowthDrop drop;
   final WidgetRef ref;
 
-  const _ActionPlansBody({
-    required this.bookIndex,
-    required this.book,
-    required this.ref,
-  });
+  const _ActionPlansBody({required this.drop, required this.ref});
 
   @override
   State<_ActionPlansBody> createState() => _ActionPlansBodyState();
@@ -39,12 +59,6 @@ class _ActionPlansBody extends StatefulWidget {
 
 class _ActionPlansBodyState extends State<_ActionPlansBody> {
   final Set<int> _selected = {};
-
-  String _shortTitle(String lesson) {
-    final idx = lesson.indexOf(' — ');
-    if (idx != -1) return lesson.substring(0, idx).trim();
-    return lesson;
-  }
 
   void _toggle(int index) {
     HapticUtils.light();
@@ -60,12 +74,18 @@ class _ActionPlansBodyState extends State<_ActionPlansBody> {
   void _continue() {
     HapticUtils.success();
     for (final i in _selected) {
-      final title = _shortTitle(widget.book.lessons[i]);
+      final questText = widget.drop.quests.length > i
+          ? widget.drop.quests[i]
+          : widget.drop.lessons.length > i
+              ? widget.drop.lessons[i]
+              : '';
       final quest = Quest(
-        id: 'action_${widget.bookIndex}_$i',
-        title: title,
+        id: 'action_${DateTime.now().millisecondsSinceEpoch}_$i',
+        title: questText.length > 60
+            ? '${questText.substring(0, 60)}...'
+            : questText,
         type: 'daily',
-        description: widget.book.lessons[i],
+        description: questText,
         xpCategory: '+10 XP',
         duration: '15 min',
         xpReward: 10,
@@ -77,16 +97,21 @@ class _ActionPlansBodyState extends State<_ActionPlansBody> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    final items = widget.drop.quests.isNotEmpty
+        ? widget.drop.quests
+        : widget.drop.lessons;
+
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [widget.book.gradientBegin, widget.book.gradientEnd],
+                colors: [AppColors.primary, AppColors.pinkLight],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -107,10 +132,11 @@ class _ActionPlansBodyState extends State<_ActionPlansBody> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                Icon(widget.book.icon, color: AppColors.white, size: 32),
+                const Icon(Icons.menu_book_rounded,
+                    color: AppColors.white, size: 32),
                 const SizedBox(height: 16),
                 Text(
-                  widget.book.title,
+                  widget.drop.bookTitle,
                   style: GoogleFonts.playfairDisplay(
                     fontSize: 28,
                     fontWeight: FontWeight.w700,
@@ -120,7 +146,7 @@ class _ActionPlansBodyState extends State<_ActionPlansBody> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  widget.book.author,
+                  widget.drop.bookAuthor,
                   style: const TextStyle(
                     fontSize: 14,
                     color: AppColors.white,
@@ -128,9 +154,9 @@ class _ActionPlansBodyState extends State<_ActionPlansBody> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                Text(
+                const Text(
                   'Choose action plans to add to your daily quests.',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     color: AppColors.white,
                   ),
@@ -141,12 +167,11 @@ class _ActionPlansBodyState extends State<_ActionPlansBody> {
           Expanded(
             child: ListView.separated(
               padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
-              itemCount: widget.book.lessons.length,
+              itemCount: items.length,
               separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
-                final lesson = widget.book.lessons[index];
+                final item = items[index];
                 final isSelected = _selected.contains(index);
-                final shortTitle = _shortTitle(lesson);
 
                 return GestureDetector(
                   onTap: () => _toggle(index),
@@ -196,22 +221,13 @@ class _ActionPlansBodyState extends State<_ActionPlansBody> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                shortTitle,
+                                item,
                                 style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w600,
                                   color: isSelected
                                       ? AppColors.primary
                                       : AppColors.grey900,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                lesson,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  color: AppColors.grey500,
-                                  height: 1.4,
                                 ),
                               ),
                             ],
@@ -252,7 +268,7 @@ class _ActionPlansBodyState extends State<_ActionPlansBody> {
                       _selected.isNotEmpty
                           ? 'Add to Quests & Continue'
                           : 'Continue',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                         color: AppColors.white,
@@ -264,6 +280,7 @@ class _ActionPlansBodyState extends State<_ActionPlansBody> {
             ),
           ),
         ],
+      ),
       ),
     );
   }

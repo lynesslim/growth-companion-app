@@ -191,15 +191,82 @@ This document outlines the comprehensive technical and execution plan for bringi
 - Write unit tests for core business logic (XP calculation, streak logic).
 - Write widget tests for critical UI components (Task cards, Onboarding flow).
 
-### Manual Verification & iOS Simulator Testing
-To launch the app on an iOS simulator and test the new UI:
-1. Ensure Xcode is installed on your Mac.
-2. In your terminal, run `open -a Simulator` to start an iOS simulator.
-3. Once the simulator is running, navigate to your project directory in terminal.
-4. Run `flutter run` and select the iOS simulator from the list of available devices.
-- Test haptics and animations on physical iOS and Android devices (note: haptics don't always trigger in simulators).
-- Verify native navigation feel (swipe back on iOS, back button handling on Android).
-- End-to-end testing of the onboarding -> daily drop -> task completion loop using mock data.
+### Manual Verification
+- Ask the user to run the app, verify search functions, send requests, and accept them.
+- Ask the user to send a social drop and ensure it correctly invokes the edge function and updates the streak without crashing.
+- Verify "Deferred Blind Box" logic works (drop is generated upon opening).
+
+---
+
+# Phase 10: Daily App Launch Streaks
+
+Implement a system to automatically track and update a user's daily usage streak upon launching the app.
+
+## Proposed Changes
+
+### Database Schema
+
+#### [MODIFY] [supabase_schema.sql](file:///Volumes/T7/Lyness/SAAS/Book%20App/supabase_schema.sql)
+- Add `last_active_date DATE` column to the `profiles` table to persist when the user last launched the app.
+
+### Dart Models
+
+#### [MODIFY] [user.dart](file:///Volumes/T7/Lyness/SAAS/Book%20App/lib/src/domain/models/user.dart)
+- Add `DateTime? lastActiveDate` mapped from `last_active_date`.
+- Add `lastActiveDate` to `copyWith` and `fromJson`/`toJson` serializers.
+
+### Repositories & Providers
+
+#### [MODIFY] [user_repository.dart](file:///Volumes/T7/Lyness/SAAS/Book%20App/lib/src/data/repositories/user_repository.dart)
+- Create an `updateStreak(int currentStreak, String lastActiveDate)` method that performs a `update()` on `profiles` to save the new streak and date.
+
+#### [MODIFY] [user_provider.dart](file:///Volumes/T7/Lyness/SAAS/Book%20App/lib/src/providers/user_provider.dart)
+- Inside the `_init()` and `refresh()` methods of `UserStateNotifier`, immediately after successfully fetching the `User`:
+  - Calculate `DateTime.now()` normalized to a pure Date (UTC or Local, but consistent).
+  - Compare it with `user.lastActiveDate`.
+  - **Logic:**
+    - If `lastActiveDate` is exactly 1 day ago: `newStreak = currentStreak + 1`.
+    - If `lastActiveDate` is > 1 day ago, or `null`: `newStreak = 1`.
+    - If `lastActiveDate` is today: do nothing.
+  - If an update is required, call `_repository.updateStreak` and set the state to the newly updated user.
+
+## User Review Required
+> [!IMPORTANT]  
+> Are there any time-zone specific rules you want for the streak? Usually, comparing local dates (e.g. `2024-05-10` vs `2024-05-11`) is sufficient, but let me know if you want it strictly locked to UTC midnight or the user's specific local midnight.
+
+---
+
+# Phase 11: Friend Profiles and Dashboard Redesign
+
+Enhance the social experience with friend profiles, proactive daily drop modals, and a visually engaging grid for gifted books.
+
+## Proposed Changes
+
+### 1. Friend Profile Screen
+#### [NEW] [friend_profile_screen.dart](file:///Volumes/T7/Lyness/SAAS/Book%20App/lib/src/features/social/friend_profile_screen.dart)
+- Create a new screen to display a user's public profile.
+- Fetch and display the user's name, avatar/initial, and "Books Read" count (querying their read `growth_drops` and `social_drops`).
+- Show context-aware action buttons: "Add Friend" (if no relationship), "Pending Request" (if requested), or "Unfriend" (if already friends).
+
+#### [MODIFY] [social_screen.dart](file:///Volumes/T7/Lyness/SAAS/Book%20App/lib/src/features/social/social_screen.dart)
+- Update friend list and search list tiles to navigate to `friend_profile_screen.dart` on tap.
+
+### 2. Dashboard Daily Drop Modal
+#### [MODIFY] [home_screen.dart](file:///Volumes/T7/Lyness/SAAS/Book%20App/lib/src/features/home/home_screen.dart)
+- Add a session-level flag (e.g., using a simple Riverpod state or an instance variable) to track if the modal has been shown during this app session.
+- If today's `GrowthDrop` exists but `isOpened` (or `isRead`) is false, AND the modal hasn't been shown yet this session, automatically display a beautifully styled modal dialog inviting the user to open their daily book.
+- Modal will contain an "Open Now" button that routes to `/book`.
+
+### 3. Dashboard Social Drops Grid
+#### [MODIFY] [social_drops_card.dart](file:///Volumes/T7/Lyness/SAAS/Book%20App/lib/src/features/home/widgets/social_drops_card.dart)
+- Refactor from a vertical list into a 2-column vertical `GridView.builder` (using `shrinkWrap: true` and `physics: NeverScrollableScrollPhysics()` to sit inside the existing scroll view).
+- **Actual Book UI:** Display a book cover style container showing the `bookTitle`. Add a small circular overlay in the top/bottom corner with the sender's profile picture/initial.
+- **Blindbox UI:** Display a vibrant container prominently featuring a Mystery Box Emoji (🎁 or 📦), with "From [Name]" text.
+
+## Verification Plan
+1. Tap a user in the search tab to view their public profile and verify "Books Read" count and friend actions work.
+2. Launch the app with an unread daily drop and verify the modal appears ONLY ONCE per session.
+3. Check the home dashboard to verify social drops display as a clean 2-column vertical grid with the correct book/blindbox UI variants.
 
 ---
 

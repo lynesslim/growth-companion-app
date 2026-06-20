@@ -22,7 +22,7 @@ class SocialScreen extends ConsumerStatefulWidget {
 class _SocialScreenState extends ConsumerState<SocialScreen> {
   final _searchController = TextEditingController();
   Timer? _debounce;
-  String? _openingDropId;
+  String? _openingFriendId;
 
   @override
   void dispose() {
@@ -117,16 +117,6 @@ class _SocialScreenState extends ConsumerState<SocialScreen> {
                 const SizedBox(height: 32),
               ],
 
-              // Unopened drops
-              if (socialState.receivedDrops.isNotEmpty) ...[
-                const Text('Unopened Blind Boxes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.primary)),
-                const SizedBox(height: 12),
-                ...socialState.receivedDrops.where((d) => !d.isOpened).map((drop) {
-                  return _buildDropCard(drop);
-                }),
-                const SizedBox(height: 32),
-              ],
-
               // Friends list
               if (socialState.acceptedFriends.isNotEmpty || socialState.outgoingRequests.isNotEmpty) ...[
                 const Text('Your Friends', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.primary)),
@@ -137,17 +127,20 @@ class _SocialScreenState extends ConsumerState<SocialScreen> {
                     (s) => (s.userId1 == userId && s.userId2 == friendId) || (s.userId1 == friendId && s.userId2 == userId),
                     orElse: () => SocialStreak(id: '', userId1: userId ?? '', userId2: friendId, currentStreak: 0),
                   );
-                  return _buildFriendCard(friend, streak, userId, friend.status == 'pending');
+                  final unopenedCount = socialState.receivedDrops
+                      .where((d) => d.senderId == friendId && !d.isOpened)
+                      .length;
+                  return _buildFriendCard(friend, streak, userId, friend.status == 'pending', unopenedCount);
                 }),
                 const SizedBox(height: 24),
               ],
 
               // Empty state when no friends and no drops
-              if (socialState.acceptedFriends.isEmpty && socialState.outgoingRequests.isEmpty && socialState.receivedDrops.every((d) => d.isOpened) && socialState.pendingRequests.isEmpty && socialState.searchResults.isEmpty)
+              if (socialState.acceptedFriends.isEmpty && socialState.outgoingRequests.isEmpty && socialState.pendingRequests.isEmpty && socialState.searchResults.isEmpty)
                 _buildEmptyState(userId),
 
               // Invite button
-              if (socialState.acceptedFriends.isNotEmpty || socialState.outgoingRequests.isNotEmpty || (socialState.receivedDrops.isNotEmpty && socialState.receivedDrops.every((d) => d.isOpened)))
+              if (socialState.acceptedFriends.isNotEmpty || socialState.outgoingRequests.isNotEmpty)
                 Center(
                   child: ElevatedButton.icon(
                     onPressed: () => _shareInvite(userId),
@@ -204,6 +197,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen> {
                 },
                 child: const Text('Add Friend', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600)),
               ),
+        onTap: () => context.push('/friend-profile', extra: user),
       ),
     );
   }
@@ -237,34 +231,6 @@ class _SocialScreenState extends ConsumerState<SocialScreen> {
     );
   }
 
-  Widget _buildDropCard(dynamic drop) {
-    final isOpening = _openingDropId == drop.id;
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 2,
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(16),
-        leading: isOpening
-            ? const SizedBox(
-                width: 44, height: 44,
-                child: Center(child: CircularProgressIndicator(strokeWidth: 2)))
-            : Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryLight.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.card_giftcard, color: AppColors.primary),
-              ),
-        title: Text('From ${drop.senderProfile?.name ?? "A Friend"}', style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(isOpening ? 'Generating your book...' : drop.isOpened ? 'Opened' : 'Tap to open your blind box!'),
-        trailing: drop.isOpened ? const Icon(Icons.check_circle, color: AppColors.primary) : const Icon(Icons.chevron_right),
-        onTap: () => _openDrop(drop),
-      ),
-    );
-  }
-
   Future<void> _openDrop(dynamic drop) async {
     if (drop.isOpened) {
       if (drop.bookData != null) context.push('/book', extra: drop.bookData);
@@ -275,11 +241,48 @@ class _SocialScreenState extends ConsumerState<SocialScreen> {
       context.push('/book', extra: drop.bookData);
       return;
     }
-    setState(() => _openingDropId = drop.id);
+    
+    setState(() => _openingFriendId = drop.senderId);
+    
+    // Show unpacking modal
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        contentPadding: const EdgeInsets.all(32),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('\u{1F4E6}', style: TextStyle(fontSize: 48)),
+            const SizedBox(height: 24),
+            const CircularProgressIndicator(color: AppColors.primary),
+            const SizedBox(height: 24),
+            Text(
+              'Unpacking your blind box...',
+              style: GoogleFonts.playfairDisplay(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: AppColors.grey900,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Generating a personalized book drop just for you.',
+              style: TextStyle(color: AppColors.grey600, fontSize: 14),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+    
     try {
       final bookData = await ref.read(socialProvider.notifier).openBlindBox(drop.id);
       if (mounted) {
-        setState(() => _openingDropId = null);
+        setState(() => _openingFriendId = null);
+        Navigator.of(context).pop(); // Close modal
         context.push('/book', extra: GrowthDrop.fromJson({
           'id': drop.id,
           'date': drop.dropDate.toIso8601String(),
@@ -295,7 +298,8 @@ class _SocialScreenState extends ConsumerState<SocialScreen> {
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _openingDropId = null);
+        setState(() => _openingFriendId = null);
+        Navigator.of(context).pop(); // Close modal
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to generate: $e')),
         );
@@ -303,16 +307,37 @@ class _SocialScreenState extends ConsumerState<SocialScreen> {
     }
   }
 
-  Widget _buildFriendCard(dynamic friend, dynamic streak, String? currentUserId, bool isPending) {
+  Widget _buildFriendCard(dynamic friend, dynamic streak, String? currentUserId, bool isPending, int unopenedCount) {
+    final profile = friend.profile;
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       elevation: 1,
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: CircleAvatar(
-          backgroundColor: isPending ? AppColors.grey300 : AppColors.primaryLight,
-          child: Text(friend.profile?.name[0].toUpperCase() ?? '?', style: const TextStyle(color: AppColors.white)),
+        leading: Stack(
+          children: [
+            CircleAvatar(
+              backgroundColor: isPending ? AppColors.grey300 : AppColors.primaryLight,
+              child: Text(friend.profile?.name[0].toUpperCase() ?? '?', style: const TextStyle(color: AppColors.white)),
+            ),
+            if (unopenedCount > 0)
+              Positioned(
+                right: 0,
+                top: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Text(
+                    '$unopenedCount',
+                    style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+          ],
         ),
         title: Text(friend.profile?.name ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: isPending
@@ -323,14 +348,26 @@ class _SocialScreenState extends ConsumerState<SocialScreen> {
                   Text('${streak.currentStreak} day streak', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600)),
                 ],
               ),
-        trailing: isPending
-            ? const Icon(Icons.access_time_rounded, color: AppColors.grey400)
-            : IconButton(
-                icon: const Icon(Icons.send, color: AppColors.primary),
-                onPressed: () {
-                  _showSendDialog(context, ref, friend);
-                },
-              ),
+        trailing: IconButton(
+          icon: const Icon(Icons.send, color: AppColors.primary),
+          onPressed: () {
+            _showSendDialog(context, ref, friend);
+          },
+        ),
+        onTap: profile != null
+            ? () {
+                if (_openingFriendId == profile.id) return; // Prevent multiple taps
+                
+                if (unopenedCount > 0) {
+                  final drop = (ref.read(socialProvider).valueOrNull?.receivedDrops ?? [])
+                      .where((d) => d.senderId == profile.id && !d.isOpened)
+                      .firstOrNull;
+                  if (drop != null) _openDrop(drop);
+                } else {
+                  context.push('/friend-profile', extra: profile);
+                }
+              }
+            : null,
       ),
     );
   }

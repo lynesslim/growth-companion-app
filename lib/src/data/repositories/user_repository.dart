@@ -37,4 +37,16 @@ class UserRepository {
         .eq('id', _userId);
     return getUserProfile();
   }
+
+  Future<User> updateStreak(int currentStreak, String lastActiveDate) async {
+    if (_userId.isEmpty) throw Exception('Not authenticated');
+    await supa.Supabase.instance.client
+        .from('profiles')
+        .update({
+          'current_streak': currentStreak,
+          'last_active_date': lastActiveDate,
+        })
+        .eq('id', _userId);
+    return getUserProfile();
+  }
 }

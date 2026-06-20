@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../domain/models/growth_drop.dart';
+import '../domain/models/user.dart';
 import '../features/auth/login_screen.dart';
 import '../features/dashboard/dashboard_shell.dart';
 import '../features/home/home_screen.dart';
@@ -13,6 +14,7 @@ import '../features/books/book_flip_screen.dart';
 import '../features/books/congrats_screen.dart';
 import '../features/books/streak_complete_screen.dart';
 import '../features/profile/settings_screen.dart';
+import '../features/social/friend_profile_screen.dart';
 import '../features/social/social_screen.dart';
 import '../features/onboarding/blind_box_screen.dart';
 import '../providers/auth_provider.dart';
@@ -134,6 +136,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: '/streak',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => StreakCompleteScreen(book: state.extra as GrowthDrop?),
+      ),
+      GoRoute(
+        path: '/friend-profile',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => FriendProfileScreen(profile: state.extra as User),
       ),
       GoRoute(
         path: '/congrats',

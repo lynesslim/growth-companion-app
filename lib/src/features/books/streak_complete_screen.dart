@@ -129,7 +129,7 @@ class StreakCompleteScreen extends ConsumerWidget {
     );
   }
 
-  void _inviteViaWhatsApp(BuildContext context, GrowthDrop bookData) {
+  void _inviteViaWhatsApp(BuildContext context, WidgetRef ref, GrowthDrop bookData) {
     final userId = ref.read(userProvider).valueOrNull?.id;
     final inviteLink = userId != null ? ' Join me here: ${Uri.base.origin}/#/invite?sender=$userId' : '';
     Share.share('I just read "${bookData.bookTitle}" by ${bookData.bookAuthor} and it was amazing! Try the app and let\'s share books daily.$inviteLink');
@@ -210,7 +210,7 @@ class StreakCompleteScreen extends ConsumerWidget {
                 child: OutlinedButton.icon(
                   onPressed: () {
                     Navigator.pop(ctx);
-                    _inviteViaWhatsApp(context, bookData);
+                    _inviteViaWhatsApp(context, ref, bookData);
                   },
                   icon: const Icon(Icons.chat_rounded, size: 18),
                   label: const Text('Invite via WhatsApp'),

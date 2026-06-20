@@ -293,6 +293,15 @@ class SocialNotifier extends AsyncNotifier<SocialState> {
     }
   }
 
+  Future<void> removeFriend(String friendRowId) async {
+    try {
+      await _supabase.from('friends').delete().eq('id', friendRowId);
+      ref.invalidateSelf();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<void> saveDropToJournal(SocialDrop drop) async {
     final user = _supabase.auth.currentUser;
     if (user == null) return;

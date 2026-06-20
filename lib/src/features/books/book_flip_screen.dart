@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/app_colors.dart';
 import '../../domain/models/growth_drop.dart';
 import '../../providers/growth_drop_provider.dart';
+import '../../providers/user_provider.dart';
 import '../../utils/haptic_utils.dart';
 
 class BookFlipScreen extends ConsumerStatefulWidget {
@@ -34,6 +35,9 @@ class _BookFlipScreenState extends ConsumerState<BookFlipScreen> {
     HapticUtils.light();
     if (_isAnimating) return;
     if (_currentPage >= _pageNames.length - 1) {
+      if (book.giftedBy == null) {
+        ref.read(userProvider.notifier).updateStreak();
+      }
       context.push('/streak', extra: book);
       return;
     }

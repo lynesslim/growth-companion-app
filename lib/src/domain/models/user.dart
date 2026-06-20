@@ -5,6 +5,7 @@ class User {
   final int currentXp;
   final int level;
   final int currentStreak;
+  final DateTime? lastDropDate;
 
   const User({
     required this.id,
@@ -13,6 +14,7 @@ class User {
     this.currentXp = 0,
     this.level = 1,
     this.currentStreak = 0,
+    this.lastDropDate,
   });
 
   User copyWith({
@@ -22,6 +24,7 @@ class User {
     int? currentXp,
     int? level,
     int? currentStreak,
+    DateTime? lastDropDate,
   }) {
     return User(
       id: id ?? this.id,
@@ -30,6 +33,7 @@ class User {
       currentXp: currentXp ?? this.currentXp,
       level: level ?? this.level,
       currentStreak: currentStreak ?? this.currentStreak,
+      lastDropDate: lastDropDate ?? this.lastDropDate,
     );
   }
 
@@ -40,6 +44,7 @@ class User {
         'current_xp': currentXp,
         'level': level,
         'current_streak': currentStreak,
+        'last_active_date': lastDropDate?.toIso8601String().split('T')[0],
       };
 
   factory User.fromJson(Map<String, dynamic> json) => User(
@@ -51,6 +56,9 @@ class User {
         currentXp: (json['current_xp'] as num?)?.toInt() ?? 0,
         level: (json['level'] as num?)?.toInt() ?? 1,
         currentStreak: (json['current_streak'] as num?)?.toInt() ?? 0,
+        lastDropDate: json['last_active_date'] != null
+            ? DateTime.parse(json['last_active_date'] as String)
+            : null,
       );
 
   @override

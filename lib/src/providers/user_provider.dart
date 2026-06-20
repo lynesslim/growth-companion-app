@@ -39,6 +39,30 @@ class UserStateNotifier extends StateNotifier<AsyncValue<User>> {
     state = await AsyncValue.guard(() => _repository.getUserProfile());
   }
 
+  Future<void> updateStreak() async {
+    state = await AsyncValue.guard(() async {
+      final user = await _repository.getUserProfile();
+      final today = DateTime.now();
+      final todayDate = DateTime(today.year, today.month, today.day);
+      final lastActive = user.lastDropDate;
+      final lastActiveDate = lastActive != null
+          ? DateTime(lastActive.year, lastActive.month, lastActive.day)
+          : null;
+
+      if (lastActiveDate == todayDate) {
+        return user.copyWith(currentStreak: user.currentStreak);
+      }
+
+      final diff = lastActiveDate != null
+          ? todayDate.difference(lastActiveDate).inDays
+          : 999;
+
+      final newStreak = diff == 1 ? user.currentStreak + 1 : 1;
+      return _repository.updateStreak(newStreak,
+          todayDate.toIso8601String().split('T')[0]);
+    });
+  }
+
   Future<void> updateXp(int xp) async {
     state = await AsyncValue.guard(() => _repository.updateXp(xp));
   }

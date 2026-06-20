@@ -30,6 +30,7 @@ CREATE TABLE profiles (
   current_xp INTEGER DEFAULT 0,
   level INTEGER DEFAULT 1,
   current_streak INTEGER DEFAULT 0,
+  last_active_date DATE, -- last date a growth drop was completed (streak tracking)
   selected_companion_id UUID REFERENCES companions(id),
   onboarding_profile JSONB, -- JSONB is perfect here instead of 5 different tables
   created_at TIMESTAMPTZ DEFAULT now()

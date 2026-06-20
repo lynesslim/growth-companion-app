@@ -31,6 +31,25 @@ serve(async (req) => {
       
     if (promptError) throw new Error('Failed to fetch prompt: ' + promptError.message)
 
+    // 1.5 Fetch Past Books to Avoid Repeats
+    const { data: pastGrowth } = await supabaseAdmin.from('growth_drops').select('recommended_books').eq('user_id', user_id)
+    const { data: pastSocial } = await supabaseAdmin.from('social_drops').select('book_data').eq('recipient_id', user_id).eq('is_opened', true)
+    
+    const pastTitles: string[] = []
+    if (pastGrowth) {
+        pastGrowth.forEach((d: any) => { 
+          if (Array.isArray(d.recommended_books)) {
+            d.recommended_books.forEach((b: any) => {
+              if (b?.bookTitle) pastTitles.push(b.bookTitle)
+            })
+          }
+        })
+    }
+    if (pastSocial) {
+        pastSocial.forEach((d: any) => { if (d.book_data?.bookTitle) pastTitles.push(d.book_data.bookTitle) })
+    }
+    const avoidString = pastTitles.length > 0 ? `DO NOT RECOMMEND ANY OF THESE PAST BOOKS: ${pastTitles.join(', ')}` : ''
+
     // 2. Call OpenAI
     const apiKey = Deno.env.get('OPENAI_API_KEY')
     if (!apiKey) throw new Error('Missing OPENAI_API_KEY')
@@ -42,6 +61,9 @@ serve(async (req) => {
     User Profile: ${JSON.stringify(onboarding_profile)}
     
     Please generate 1 highly relevant non-fiction book drop for this specific user.
+    Random seed to ensure variety on regeneration: ${Math.random()}
+    
+    ${avoidString}
     `
     
     const response = await openai.chat.completions.create({

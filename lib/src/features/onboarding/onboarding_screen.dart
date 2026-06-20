@@ -74,7 +74,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     };
     final currentUser = ref.read(userProvider).valueOrNull;
     if (currentUser != null) {
-      final updated = currentUser.copyWith(onboardingProfile: answersMap);
+      final updated = currentUser.copyWith(
+        name: _name.trim().isNotEmpty ? _name.trim() : currentUser.name,
+        onboardingProfile: answersMap
+      );
       await ref.read(userProvider.notifier).saveOnboardingData(updated);
     }
     if (mounted) _goTo(10);

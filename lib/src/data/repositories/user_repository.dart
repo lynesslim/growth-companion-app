@@ -30,7 +30,10 @@ class UserRepository {
     if (_userId.isEmpty) throw Exception('Not authenticated');
     await supa.Supabase.instance.client
         .from('profiles')
-        .update({'onboarding_profile': updatedUser.onboardingProfile})
+        .update({
+          'name': updatedUser.name,
+          'onboarding_profile': updatedUser.onboardingProfile
+        })
         .eq('id', _userId);
     return getUserProfile();
   }

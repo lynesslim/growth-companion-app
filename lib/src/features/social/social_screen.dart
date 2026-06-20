@@ -40,7 +40,10 @@ class _SocialScreenState extends ConsumerState<SocialScreen> {
 
   void _shareInvite(String? userId) {
     if (userId == null) return;
-    final inviteLink = 'http://localhost:54321/#/invite?sender=$userId';
+    
+    // Use the actual live domain the app is running on
+    final inviteLink = '${Uri.base.origin}/#/invite?sender=$userId';
+    
     try {
       Share.share('Read with me! I\'m sending you a daily blind-box book drop. Join here: $inviteLink');
     } catch (_) {}
@@ -434,7 +437,6 @@ class _SocialScreenState extends ConsumerState<SocialScreen> {
   }
 
   void _showJournalPicker(BuildContext context, WidgetRef ref, String friendId) {
-    final journalDrops = ref.read(journalProvider).valueOrNull ?? [];
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -448,62 +450,72 @@ class _SocialScreenState extends ConsumerState<SocialScreen> {
         expand: false,
         builder: (_, scrollController) => Padding(
           padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40, height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.grey300,
-                    borderRadius: BorderRadius.circular(2),
+          child: Consumer(
+            builder: (context, ref, child) {
+              final journalState = ref.watch(journalProvider);
+              
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40, height: 4,
+                      decoration: BoxDecoration(
+                        color: AppColors.grey300,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              const Text('Choose a Book to Send', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.grey900)),
-              const SizedBox(height: 16),
-              if (journalDrops.isEmpty)
-                const Expanded(
-                  child: Center(child: Text('No books in your journal yet.', style: TextStyle(color: AppColors.grey500))),
-                )
-              else
-                Expanded(
-                  child: ListView.separated(
-                    controller: scrollController,
-                    itemCount: journalDrops.length,
-                    separatorBuilder: (_, _) => const Divider(),
-                    itemBuilder: (_, i) {
-                      final drop = journalDrops[i];
-                      return ListTile(
-                        leading: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryLight.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(Icons.menu_book_rounded, color: AppColors.primary, size: 20),
-                        ),
-                        title: Text(drop.bookTitle, style: const TextStyle(fontWeight: FontWeight.w600)),
-                        subtitle: Text(drop.bookAuthor, style: const TextStyle(color: AppColors.grey500)),
-                        onTap: () {
-                          Navigator.pop(ctx);
-                          ref.read(socialProvider.notifier).sendBookFromJournal(friendId, {
-                            'bookTitle': drop.bookTitle,
-                            'bookAuthor': drop.bookAuthor,
-                            'whatItsAbout': drop.whatItsAbout,
-                            'lessons': drop.lessons,
-                            'summary': drop.summary,
-                          });
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Book sent!')),
-                          );
-                        },
-                      );
-                    },
+                  const SizedBox(height: 20),
+                  const Text('Choose a Book to Send', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.grey900)),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: journalState.when(
+                      data: (journalDrops) {
+                        if (journalDrops.isEmpty) {
+                          return const Center(child: Text('No books in your journal yet.', style: TextStyle(color: AppColors.grey500)));
+                        }
+                        return ListView.separated(
+                          controller: scrollController,
+                          itemCount: journalDrops.length,
+                          separatorBuilder: (_, _) => const Divider(),
+                          itemBuilder: (_, i) {
+                            final drop = journalDrops[i];
+                            return ListTile(
+                              leading: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primaryLight.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(Icons.menu_book_rounded, color: AppColors.primary, size: 20),
+                              ),
+                              title: Text(drop.bookTitle, style: const TextStyle(fontWeight: FontWeight.w600)),
+                              subtitle: Text(drop.bookAuthor, style: const TextStyle(color: AppColors.grey500)),
+                              onTap: () {
+                                Navigator.pop(ctx);
+                                ref.read(socialProvider.notifier).sendBookFromJournal(friendId, {
+                                  'bookTitle': drop.bookTitle,
+                                  'bookAuthor': drop.bookAuthor,
+                                  'whatItsAbout': drop.whatItsAbout,
+                                  'lessons': drop.lessons,
+                                  'summary': drop.summary,
+                                });
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Book sent!')),
+                                );
+                              },
+                            );
+                          },
+                        );
+                      },
+                      loading: () => const Center(child: CircularProgressIndicator()),
+                      error: (err, stack) => const Center(child: Text('Error loading journal')),
+                    ),
                   ),
-                ),
-            ],
+                ],
+              );
+            },
           ),
         ),
       ),

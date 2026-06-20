@@ -130,7 +130,9 @@ class StreakCompleteScreen extends ConsumerWidget {
   }
 
   void _inviteViaWhatsApp(BuildContext context, GrowthDrop bookData) {
-    Share.share('I just read "${bookData.bookTitle}" by ${bookData.bookAuthor} and it was amazing! Try the app and let\'s share books daily.');
+    final userId = ref.read(userProvider).valueOrNull?.id;
+    final inviteLink = userId != null ? ' Join me here: ${Uri.base.origin}/#/invite?sender=$userId' : '';
+    Share.share('I just read "${bookData.bookTitle}" by ${bookData.bookAuthor} and it was amazing! Try the app and let\'s share books daily.$inviteLink');
   }
 
   void _showFriendPicker(BuildContext context, WidgetRef ref, GrowthDrop bookData) {

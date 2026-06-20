@@ -198,7 +198,8 @@ class SocialNotifier extends AsyncNotifier<SocialState> {
           .eq('id', dropId);
       ref.invalidateSelf();
       final data = res.data;
-      return Map<String, dynamic>.from(data is Map ? data : {});
+      final actualData = data is Map && data['data'] != null ? data['data'] : data;
+      return Map<String, dynamic>.from(actualData is Map ? actualData : {});
     } catch (e) {
       print('Error opening blind box: $e');
       rethrow;

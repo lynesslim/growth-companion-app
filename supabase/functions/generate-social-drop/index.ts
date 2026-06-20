@@ -42,6 +42,19 @@ serve(async (req) => {
     if (recipientError || !recipientData) throw new Error('Failed to fetch recipient profile')
     const onboardingProfile = recipientData.onboarding_profile || {}
 
+    // 2.5 Fetch Past Books to Avoid Repeats
+    const { data: pastGrowth } = await supabaseAdmin.from('growth_drops').select('recommended_books').eq('user_id', recipient_id)
+    const { data: pastSocial } = await supabaseAdmin.from('social_drops').select('book_data').eq('recipient_id', recipient_id).eq('is_opened', true)
+    
+    const pastTitles = []
+    if (pastGrowth) {
+        pastGrowth.forEach((d: any) => { if (d.recommended_books?.bookTitle) pastTitles.push(d.recommended_books.bookTitle) })
+    }
+    if (pastSocial) {
+        pastSocial.forEach((d: any) => { if (d.book_data?.bookTitle) pastTitles.push(d.book_data.bookTitle) })
+    }
+    const avoidString = pastTitles.length > 0 ? `DO NOT RECOMMEND ANY OF THESE PAST BOOKS: ${pastTitles.join(', ')}` : ''
+
     // 3. Fetch Prompt
     const { data: promptData, error: promptError } = await supabaseAdmin
       .from('ai_prompts')
@@ -60,7 +73,12 @@ serve(async (req) => {
     const userPrompt = `
     Friend's Profile: ${JSON.stringify(onboardingProfile)}
     
-    Please generate 1 highly relevant non-fiction book drop tailored to this friend.
+    IMPORTANT: Do not recommend "Atomic Habits" or the most obvious mainstream books unless absolutely necessary.
+    Please select a HIGHLY DIVERSE, unique, or slightly obscure non-fiction book that perfectly matches this profile. 
+    Ensure it is a real published book. The selection must feel like a completely new and exciting discovery for the user.
+    Random seed to ensure variety: ${Math.random()}
+    
+    ${avoidString}
     `
     
     const response = await openai.chat.completions.create({

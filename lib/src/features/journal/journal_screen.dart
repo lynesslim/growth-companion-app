@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/app_colors.dart';
+import '../../core/animated_widgets.dart';
 import '../../providers/journal_provider.dart';
 import '../../domain/models/growth_drop.dart';
 
@@ -18,14 +19,17 @@ class JournalScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
-              child: Text(
-                'Your Library',
-                style: GoogleFonts.playfairDisplay(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.grey900,
+            EntranceFadeSlide(
+              delayMs: 0,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+                child: Text(
+                  'Your Library',
+                  style: GoogleFonts.playfairDisplay(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.grey900,
+                  ),
                 ),
               ),
             ),
@@ -104,7 +108,7 @@ class _BookCoverCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return CardPress(
       onTap: () => context.push('/book', extra: drop),
       child: Container(
         padding: const EdgeInsets.all(16),

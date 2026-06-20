@@ -1,25 +1,44 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/app_colors.dart';
+import '../../core/motion_tokens.dart';
 import '../../utils/haptic_utils.dart';
 
-class DashboardShell extends StatelessWidget {
-  const DashboardShell({super.key, required this.navigationShell});
-
+class DashboardShell extends StatefulWidget {
   final StatefulNavigationShell navigationShell;
 
+  const DashboardShell({super.key, required this.navigationShell});
+
+  @override
+  State<DashboardShell> createState() => _DashboardShellState();
+}
+
+class _DashboardShellState extends State<DashboardShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: navigationShell,
+      body: AnimatedSwitcher(
+        duration: MotionDurations.crossfade,
+        transitionBuilder: (child, animation) {
+          final slideTween = Tween<Offset>(
+            begin: const Offset(0, 0.04),
+            end: Offset.zero,
+          ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOut));
+          return FadeTransition(
+            opacity: animation,
+            child: SlideTransition(position: slideTween, child: child),
+          );
+        },
+        child: widget.navigationShell,
+      ),
       extendBody: true,
       bottomNavigationBar: _FloatingBottomNav(
-        currentIndex: navigationShell.currentIndex,
+        currentIndex: widget.navigationShell.currentIndex,
         onTap: (index) {
           HapticUtils.light();
-          navigationShell.goBranch(
+          widget.navigationShell.goBranch(
             index,
-            initialLocation: index == navigationShell.currentIndex,
+            initialLocation: index == widget.navigationShell.currentIndex,
           );
         },
       ),

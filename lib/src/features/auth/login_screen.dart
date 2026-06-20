@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/app_colors.dart';
+import '../../core/animated_widgets.dart';
 import '../../utils/haptic_utils.dart';
 import '../../providers/auth_provider.dart';
 
@@ -84,26 +85,34 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  'Growth\nCompanion',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.playfairDisplay(
-                    fontSize: 36,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.grey900,
-                    height: 1.1,
+                EntranceFadeSlide(
+                  delayMs: 0,
+                  child: Text(
+                    'Growth\nCompanion',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.playfairDisplay(
+                      fontSize: 36,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.grey900,
+                      height: 1.1,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  _isLogin ? 'Welcome back' : 'Begin your journey',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: AppColors.grey500,
+                EntranceFadeSlide(
+                  delayMs: 50,
+                  child: Text(
+                    _isLogin ? 'Welcome back' : 'Begin your journey',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: AppColors.grey500,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 48),
-                Container(
+                EntranceFadeSlide(
+                  delayMs: 100,
+                  child: Container(
                   decoration: BoxDecoration(
                     color: AppColors.white,
                     borderRadius: BorderRadius.circular(20),
@@ -140,7 +149,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         const SizedBox(height: 24),
                         SizedBox(
                           width: double.infinity,
-                          child: GestureDetector(
+                          child: PressScale(
                             onTap: _isLoading ? null : _submit,
                             child: Container(
                               padding: const EdgeInsets.symmetric(vertical: 16),
@@ -174,12 +183,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ),
                           ),
                         ),
-                      ],
-                    ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 24),
-                GestureDetector(
+              ),
+              ),
+              const SizedBox(height: 24),
+                PressScale(
+                  haptic: false,
                   onTap: _isLoading
                       ? null
                       : () {

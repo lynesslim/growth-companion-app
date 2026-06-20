@@ -7,7 +7,8 @@ import '../../core/app_colors.dart';
 
 class InviteLandingScreen extends StatefulWidget {
   final String senderId;
-  const InviteLandingScreen({super.key, required this.senderId});
+  final String? dropId;
+  const InviteLandingScreen({super.key, required this.senderId, this.dropId});
 
   @override
   State<InviteLandingScreen> createState() => _InviteLandingScreenState();
@@ -33,6 +34,9 @@ class _InviteLandingScreenState extends State<InviteLandingScreen> {
     final prefs = await SharedPreferences.getInstance();
     if (widget.senderId.isNotEmpty) {
       await prefs.setString('sender_id', widget.senderId);
+    }
+    if (widget.dropId != null && widget.dropId!.isNotEmpty) {
+      await prefs.setString('shared_drop_id', widget.dropId!);
     }
     setState(() => _unpacking = true);
     _confettiController.play();

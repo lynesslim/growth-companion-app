@@ -94,6 +94,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => InviteLandingScreen(
           senderId: state.uri.queryParameters['sender'] ?? '',
+          dropId: state.uri.queryParameters['drop_id'],
         ),
       ),
       // Phase 2 flow: Onboarding -> Books -> Congrats -> Home

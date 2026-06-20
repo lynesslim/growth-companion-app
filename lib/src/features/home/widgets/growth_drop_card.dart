@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supa;
 import '../../../core/app_colors.dart';
+import '../../../core/animated_widgets.dart';
 import '../../../providers/growth_drop_provider.dart';
 import '../../../providers/user_provider.dart';
 
@@ -161,7 +162,7 @@ class _GrowthDropCardState extends ConsumerState<GrowthDropCard> {
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
-              child: GestureDetector(
+              child: PressScale(
                 onTap: () => context.push('/book'),
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 14),
@@ -201,8 +202,9 @@ class _GrowthDropCardState extends ConsumerState<GrowthDropCard> {
               const SizedBox(height: 10),
               SizedBox(
                 width: double.infinity,
-                child: GestureDetector(
+                child: PressScale(
                   onTap: _generating ? null : _generateToday,
+                  haptic: false,
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     decoration: BoxDecoration(
@@ -248,7 +250,7 @@ class _GrowthDropCardState extends ConsumerState<GrowthDropCard> {
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
-              child: GestureDetector(
+              child: PressScale(
                 onTap: _generateToday,
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 14),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/app_colors.dart';
+import '../../core/animated_widgets.dart';
 import '../../domain/models/growth_drop.dart';
 import '../../providers/growth_drop_provider.dart';
 import '../../providers/user_provider.dart';
@@ -186,7 +187,7 @@ class _BookFlipScreenState extends ConsumerState<BookFlipScreen> {
               child: Row(
                 children: [
                   if (_currentPage > 0)
-                    GestureDetector(
+                    PressScale(
                       onTap: _previousPage,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
@@ -215,7 +216,7 @@ class _BookFlipScreenState extends ConsumerState<BookFlipScreen> {
                       ),
                     ),
                   const Spacer(),
-                  GestureDetector(
+                  PressScale(
                     onTap: () => _nextPage(book),
                     child: Container(
                       padding: const EdgeInsets.symmetric(

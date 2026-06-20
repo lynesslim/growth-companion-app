@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../core/app_colors.dart';
+import '../../core/animated_widgets.dart';
 import '../../domain/models/friend.dart';
 import '../../domain/models/growth_drop.dart';
 import '../../domain/models/social_streak.dart';
@@ -104,15 +105,15 @@ class _SocialScreenState extends ConsumerState<SocialScreen> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: IconButton(
-                      icon: const Icon(Icons.person_add, color: AppColors.white),
-                      onPressed: () => _shareInvite(userId),
-                      tooltip: 'Invite a Friend',
+                  PressScale(
+                    onTap: () => _shareInvite(userId),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Icon(Icons.person_add, color: AppColors.white, size: 24),
+                      padding: const EdgeInsets.all(12),
                     ),
                   ),
                 ],
@@ -130,7 +131,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen> {
 
               // Pending requests
               if (socialState.pendingRequests.isNotEmpty) ...[
-                const Text('Pending Requests', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.primary)),
+                EntranceFadeSlide(delayMs: 0, child: const Text('Pending Requests', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.primary))),
                 const SizedBox(height: 12),
                 ...socialState.pendingRequests.map((req) => _buildPendingRequest(req)),
                 const SizedBox(height: 32),
@@ -138,7 +139,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen> {
 
               // Friends list
               if (socialState.acceptedFriends.isNotEmpty || socialState.outgoingRequests.isNotEmpty) ...[
-                const Text('Your Friends', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.primary)),
+                EntranceFadeSlide(delayMs: 50, child: const Text('Your Friends', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.primary))),
                 const SizedBox(height: 12),
                 ...[...socialState.acceptedFriends, ...socialState.outgoingRequests].map((friend) {
                   final friendId = friend.userId1 == userId ? friend.userId2 : friend.userId1;
@@ -171,22 +172,24 @@ class _SocialScreenState extends ConsumerState<SocialScreen> {
 
   Widget _buildSearchResult(dynamic user, String? currentUserId) {
     final isSelf = user.id == currentUserId;
-    return Card(
-      margin: const EdgeInsets.only(top: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 1,
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        leading: CircleAvatar(
-          backgroundColor: AppColors.primaryLight,
-          child: Text(user.name[0].toUpperCase() ?? '?', style: const TextStyle(color: AppColors.white)),
-        ),
-        title: Text(user.name ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text('Level ${user.level} \u2022 ${user.currentXp} XP'),
-        trailing: isSelf
-            ? const Chip(label: Text('You', style: TextStyle(fontSize: 12)))
-            : TextButton(
-                onPressed: () async {
+    return CardPress(
+      onTap: () => context.push('/friend-profile', extra: user),
+      child: Card(
+        margin: const EdgeInsets.only(top: 8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        elevation: 1,
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          leading: CircleAvatar(
+            backgroundColor: AppColors.primaryLight,
+            child: Text(user.name[0].toUpperCase() ?? '?', style: const TextStyle(color: AppColors.white)),
+          ),
+          title: Text(user.name ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.bold)),
+          subtitle: Text('Level ${user.level} \u2022 ${user.currentXp} XP'),
+          trailing: isSelf
+              ? const Chip(label: Text('You', style: TextStyle(fontSize: 12)))
+              : TextButton(
+                  onPressed: () async {
                   try {
                     await ref.read(socialProvider.notifier).sendFriendRequest(user.id);
                     if (context.mounted) {
@@ -204,35 +207,37 @@ class _SocialScreenState extends ConsumerState<SocialScreen> {
                 },
                 child: const Text('Add Friend', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600)),
               ),
-        onTap: () => context.push('/friend-profile', extra: user),
+        ),
       ),
     );
   }
 
   Widget _buildPendingRequest(Friend req) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 1,
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: CircleAvatar(
-          backgroundColor: AppColors.primaryLight,
-          child: Text(req.profile?.name[0].toUpperCase() ?? '?', style: const TextStyle(color: AppColors.white)),
-        ),
-        title: Text('${req.profile?.name ?? "Unknown"} wants to be friends!', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.check_circle, color: Colors.green),
-              onPressed: () => ref.read(socialProvider.notifier).acceptFriendRequest(req.id),
-            ),
-            IconButton(
-              icon: const Icon(Icons.cancel, color: Colors.red),
-              onPressed: () => ref.read(socialProvider.notifier).declineFriendRequest(req.id),
-            ),
-          ],
+    return CardPress(
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        elevation: 1,
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          leading: CircleAvatar(
+            backgroundColor: AppColors.primaryLight,
+            child: Text(req.profile?.name[0].toUpperCase() ?? '?', style: const TextStyle(color: AppColors.white)),
+          ),
+          title: Text('${req.profile?.name ?? "Unknown"} wants to be friends!', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.check_circle, color: Colors.green),
+                onPressed: () => ref.read(socialProvider.notifier).acceptFriendRequest(req.id),
+              ),
+              IconButton(
+                icon: const Icon(Icons.cancel, color: Colors.red),
+                onPressed: () => ref.read(socialProvider.notifier).declineFriendRequest(req.id),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -334,13 +339,27 @@ class _SocialScreenState extends ConsumerState<SocialScreen> {
   }) {
     final profile = friend.profile;
     final canSend = !alreadySent || isAdmin;
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 1,
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: Stack(
+    return CardPress(
+      onTap: profile != null
+          ? () {
+              if (_openingFriendId == profile.id) return;
+              if (unopenedCount > 0) {
+                final drop = (ref.read(socialProvider).valueOrNull?.receivedDrops ?? [])
+                    .where((d) => d.senderId == profile.id && !d.isOpened)
+                    .firstOrNull;
+                if (drop != null) _openDrop(drop);
+              } else {
+                context.push('/friend-profile', extra: profile);
+              }
+            }
+          : null,
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        elevation: 1,
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          leading: Stack(
           children: [
             CircleAvatar(
               backgroundColor: isPending ? AppColors.grey300 : AppColors.primaryLight,
@@ -381,20 +400,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen> {
                 }
               : null,
         ),
-        onTap: profile != null
-            ? () {
-                if (_openingFriendId == profile.id) return; // Prevent multiple taps
-                
-                if (unopenedCount > 0) {
-                  final drop = (ref.read(socialProvider).valueOrNull?.receivedDrops ?? [])
-                      .where((d) => d.senderId == profile.id && !d.isOpened)
-                      .firstOrNull;
-                  if (drop != null) _openDrop(drop);
-                } else {
-                  context.push('/friend-profile', extra: profile);
-                }
-              }
-            : null,
+      ),
       ),
     );
   }

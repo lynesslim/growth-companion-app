@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/app_colors.dart';
+import '../../../core/animated_widgets.dart';
 import '../../../domain/models/growth_drop.dart';
 import '../../../providers/social_provider.dart';
 
@@ -130,7 +131,7 @@ class _SocialDropsCardState extends ConsumerState<SocialDropsCard> {
 
     if (drop.bookData != null) {
       // Book cover style
-      return GestureDetector(
+      return CardPress(
         onTap: () => _openDrop(drop),
         child: Container(
           padding: const EdgeInsets.all(16),
@@ -194,7 +195,7 @@ class _SocialDropsCardState extends ConsumerState<SocialDropsCard> {
     }
 
     // Blind box style
-    return GestureDetector(
+    return CardPress(
       onTap: () => _openDrop(drop),
       child: Container(
         padding: const EdgeInsets.all(16),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supa;
 import '../../core/app_colors.dart';
+import '../../core/animated_widgets.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -19,7 +20,7 @@ class SettingsScreen extends StatelessWidget {
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            GestureDetector(
+            PressScale(
               onTap: () async {
                 await supa.Supabase.instance.client.auth.signOut();
                 if (context.mounted) context.go('/login');

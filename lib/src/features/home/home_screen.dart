@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/app_colors.dart';
+import '../../core/animated_widgets.dart';
 import '../../providers/growth_drop_provider.dart';
 import '../../providers/social_provider.dart';
 import '../../providers/user_provider.dart';
@@ -31,30 +32,55 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Future<void> _processInvite() async {
     final prefs = await SharedPreferences.getInstance();
     final senderId = prefs.getString('sender_id');
+    final sharedDropId = prefs.getString('shared_drop_id');
     if (senderId == null) return;
     await prefs.remove('sender_id');
+    await prefs.remove('shared_drop_id');
 
     final supabase = Supabase.instance.client;
     final userId = supabase.auth.currentUser?.id;
     if (userId == null) return;
 
+    // Self-referral guard
+    if (senderId == userId) return;
+
     try {
-      await supabase.from('friends').insert({
-        'user_id_1': senderId,
-        'user_id_2': userId,
-        'status': 'accepted',
-      });
+      // Dedup: check if friendship already exists
+      final existing = await supabase
+          .from('friends')
+          .select()
+          .or('and(user_id_1.eq.$senderId,user_id_2.eq.$userId),and(user_id_1.eq.$userId,user_id_2.eq.$senderId)')
+          .maybeSingle();
+      if (existing == null) {
+        await supabase.from('friends').insert({
+          'user_id_1': senderId,
+          'user_id_2': userId,
+          'status': 'accepted',
+        });
+      }
+
+      // Fetch shared book if drop_id was provided
+      Map<String, dynamic> bookData = {};
+      String message = "You've received a blind box from your friend!";
+      if (sharedDropId != null && sharedDropId.isNotEmpty) {
+        final response = await supabase.rpc('get_shared_book', params: {'drop_id': sharedDropId});
+        if (response != null) {
+          bookData = Map<String, dynamic>.from(response);
+          message = "You've received a book from your friend!";
+        }
+      }
+
       await supabase.from('social_drops').insert({
         'sender_id': senderId,
         'recipient_id': userId,
         'is_opened': false,
         'drop_date': DateTime.now().toIso8601String().split('T')[0],
-        'book_data': {},
+        'book_data': bookData,
       });
       ref.invalidate(socialProvider);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("You've received a blind box from your friend!")),
+          SnackBar(content: Text(message)),
         );
       }
     } catch (_) {
@@ -65,6 +91,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final dropState = ref.watch(growthDropProvider);
+    final socialState = ref.watch(socialProvider);
     final drop = dropState.valueOrNull;
 
     if (!_modalShown && !dropState.isLoading) {
@@ -77,16 +104,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       }
     }
 
+    if (dropState.isLoading || socialState.isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      );
+    }
+
     return SingleChildScrollView(
       padding: const EdgeInsets.only(left: 20, right: 20, top: 60, bottom: 100),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const HomeHeader(),
+          EntranceFadeSlide(delayMs: 0, child: const HomeHeader()),
           const SizedBox(height: 28),
-          const GrowthDropCard(),
+          EntranceFadeSlide(delayMs: 50, child: const GrowthDropCard()),
           const SizedBox(height: 24),
-          const SocialDropsCard(),
+          EntranceFadeSlide(delayMs: 100, child: const SocialDropsCard()),
         ],
       ),
     );

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 import '../../core/app_colors.dart';
+import '../../core/animated_widgets.dart';
 import '../../domain/models/user.dart';
 import '../../providers/social_provider.dart';
 
@@ -160,58 +161,67 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
           children: [
             const SizedBox(height: 20),
             // Avatar with gradient
-            Container(
-              width: 96,
-              height: 96,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppColors.primaryLight, AppColors.pinkLight],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+            EntranceFadeSlide(
+              delayMs: 0,
+              child: Container(
+                width: 96,
+                height: 96,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppColors.primaryLight, AppColors.pinkLight],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(28),
                 ),
-                borderRadius: BorderRadius.circular(28),
-              ),
-              child: Center(
-                child: Text(
-                  widget.profile.name[0].toUpperCase(),
-                  style: const TextStyle(fontSize: 40, color: AppColors.white, fontWeight: FontWeight.bold),
+                child: Center(
+                  child: Text(
+                    widget.profile.name[0].toUpperCase(),
+                    style: const TextStyle(fontSize: 40, color: AppColors.white, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
             ),
             const SizedBox(height: 20),
-            Text(
-              widget.profile.name,
-              style: GoogleFonts.playfairDisplay(
-                fontSize: 28,
-                fontWeight: FontWeight.w700,
-                color: AppColors.grey900,
+            EntranceFadeSlide(
+              delayMs: 50,
+              child: Text(
+                widget.profile.name,
+                style: GoogleFonts.playfairDisplay(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.grey900,
+                ),
               ),
             ),
             const SizedBox(height: 32),
 
             // Stats card
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppColors.white,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.06),
-                    blurRadius: 20,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _StatItem(icon: Icons.menu_book_rounded, label: 'Books', value: _loadingBooks ? '-' : '$_booksRead'),
-                  _StatItem(icon: Icons.auto_awesome_rounded, label: 'Level', value: '${widget.profile.level}'),
-                  _StatItem(icon: Icons.stars_rounded, label: 'XP', value: '${widget.profile.currentXp}'),
-                  _StatItem(icon: Icons.local_fire_department_rounded, label: 'Streak', value: '${widget.profile.currentStreak}'),
-                ],
+            EntranceFadeSlide(
+              delayMs: 100,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: AppColors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.06),
+                      blurRadius: 20,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _StatItem(icon: Icons.menu_book_rounded, label: 'Books', value: _loadingBooks ? '-' : '$_booksRead'),
+                    _StatItem(icon: Icons.auto_awesome_rounded, label: 'Level', value: '${widget.profile.level}'),
+                    _StatItem(icon: Icons.stars_rounded, label: 'XP', value: '${widget.profile.currentXp}'),
+                    _StatItem(icon: Icons.local_fire_department_rounded, label: 'Streak', value: '${widget.profile.currentStreak}'),
+                  ],
+                ),
               ),
             ),
 

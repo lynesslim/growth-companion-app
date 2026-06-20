@@ -272,7 +272,7 @@ class _StreakCompleteScreenState extends ConsumerState<StreakCompleteScreen> {
 
   void _inviteViaWhatsApp(BuildContext context, WidgetRef ref, GrowthDrop bookData) {
     final userId = ref.read(userProvider).valueOrNull?.id;
-    final inviteLink = userId != null ? ' Join me here: ${Uri.base.origin}/#/invite?sender=$userId' : '';
+    final inviteLink = userId != null ? ' Join me here: ${Uri.base.origin}/#/invite?sender=$userId&drop_id=${bookData.id}' : '';
     Share.share('I just read "${bookData.bookTitle}" by ${bookData.bookAuthor} and it was amazing! Try the app and let\'s share books daily.$inviteLink');
   }
 

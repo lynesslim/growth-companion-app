@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/app_colors.dart';
+import '../../core/animated_widgets.dart';
 import '../../providers/user_provider.dart';
 import '../../providers/journal_provider.dart';
 
@@ -11,8 +12,17 @@ class ProfileScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(userProvider).valueOrNull;
-    final drops = ref.watch(journalProvider).valueOrNull ?? [];
+    final userState = ref.watch(userProvider);
+    final journalState = ref.watch(journalProvider);
+
+    if (userState.isLoading || journalState.isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+      );
+    }
+
+    final user = userState.valueOrNull;
+    final drops = journalState.valueOrNull ?? [];
 
     final streak = user?.currentStreak ?? 0;
     final xp = user?.currentXp ?? 0;
@@ -27,24 +37,29 @@ class ProfileScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Settings icon
-              Align(
-                alignment: Alignment.centerRight,
-                child: GestureDetector(
-                  onTap: () => context.push('/settings'),
-                  child: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppColors.grey100,
-                      borderRadius: BorderRadius.circular(12),
+              EntranceFadeSlide(
+                delayMs: 0,
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: PressScale(
+                    onTap: () => context.push('/settings'),
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.grey100,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.settings_rounded,
+                          color: AppColors.grey600, size: 22),
                     ),
-                    child: const Icon(Icons.settings_rounded,
-                        color: AppColors.grey600, size: 22),
                   ),
                 ),
               ),
               const SizedBox(height: 8),
               // Avatar & identity
-              Center(
+              EntranceFadeSlide(
+                delayMs: 50,
+                child: Center(
                 child: Column(
                   children: [
                     Container(
@@ -90,9 +105,12 @@ class ProfileScreen extends ConsumerWidget {
                   ],
                 ),
               ),
+              ),
               const SizedBox(height: 28),
               // Stats grid
-              Row(
+              EntranceFadeSlide(
+                delayMs: 100,
+                child: Row(
                 children: [
                   Expanded(child: _StatCard(
                     icon: Icons.local_fire_department_rounded,
@@ -111,8 +129,11 @@ class ProfileScreen extends ConsumerWidget {
                   )),
                 ],
               ),
+              ),
               const SizedBox(height: 12),
-              Row(
+              EntranceFadeSlide(
+                delayMs: 150,
+                child: Row(
                 children: [
                   Expanded(child: _StatCard(
                     icon: Icons.menu_book_rounded,
@@ -131,14 +152,18 @@ class ProfileScreen extends ConsumerWidget {
                   )),
                 ],
               ),
+              ),
               const SizedBox(height: 28),
               // Achievements
-              Text(
-                'Achievements',
-                style: GoogleFonts.playfairDisplay(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.grey900,
+              EntranceFadeSlide(
+                delayMs: 200,
+                child: Text(
+                  'Achievements',
+                  style: GoogleFonts.playfairDisplay(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.grey900,
+                  ),
                 ),
               ),
               const SizedBox(height: 16),

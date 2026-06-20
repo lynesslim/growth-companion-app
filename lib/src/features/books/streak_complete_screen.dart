@@ -64,7 +64,7 @@ class _StreakCompleteScreenState extends ConsumerState<StreakCompleteScreen> {
                               end: Alignment.bottomRight,
                             )
                           : const LinearGradient(
-                              colors: [Color(0xFFF97316), Color(0xFFF59E0B)],
+                              colors: [AppColors.xpInfluence, AppColors.warning],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
@@ -209,8 +209,8 @@ class _StreakCompleteScreenState extends ConsumerState<StreakCompleteScreen> {
           colors: const [
             AppColors.primary,
             AppColors.pinkLight,
-            Color(0xFFF97316),
-            Color(0xFFF59E0B),
+            AppColors.xpInfluence,
+            AppColors.warning,
             Colors.white,
           ],
           numberOfParticles: 20,

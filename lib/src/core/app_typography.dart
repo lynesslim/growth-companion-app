@@ -4,6 +4,27 @@ import 'package:google_fonts/google_fonts.dart';
 class AppTypography {
   AppTypography._();
 
+  // Named convenience styles
+  static TextStyle get h1Playfair => GoogleFonts.playfairDisplay(
+        fontSize: 24,
+        fontWeight: FontWeight.w700,
+      );
+
+  static TextStyle get h2Inter => GoogleFonts.inter(
+        fontSize: 18,
+        fontWeight: FontWeight.w700,
+      );
+
+  static TextStyle get bodyInter => GoogleFonts.inter(
+        fontSize: 15,
+        fontWeight: FontWeight.w400,
+      );
+
+  static TextStyle get captionInter => GoogleFonts.inter(
+        fontSize: 11,
+        fontWeight: FontWeight.w600,
+      );
+
   static TextTheme get textTheme {
     return GoogleFonts.interTextTheme().copyWith(
       displayLarge: GoogleFonts.playfairDisplay(
@@ -55,19 +76,19 @@ class AppTypography {
         letterSpacing: 0.1,
       ),
       bodyLarge: GoogleFonts.inter(
-        fontSize: 16,
+        fontSize: 17,
         fontWeight: FontWeight.w400,
         letterSpacing: 0.5,
         height: 1.5,
       ),
       bodyMedium: GoogleFonts.inter(
-        fontSize: 14,
+        fontSize: 15,
         fontWeight: FontWeight.w400,
         letterSpacing: 0.25,
         height: 1.5,
       ),
       bodySmall: GoogleFonts.inter(
-        fontSize: 12,
+        fontSize: 13,
         fontWeight: FontWeight.w400,
         letterSpacing: 0.4,
       ),

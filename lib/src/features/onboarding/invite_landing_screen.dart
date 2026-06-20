@@ -128,8 +128,8 @@ class _InviteLandingScreenState extends State<InviteLandingScreen> {
               colors: const [
                 AppColors.primary,
                 AppColors.pinkLight,
-                Color(0xFFF97316),
-                Color(0xFFF59E0B),
+                AppColors.xpInfluence,
+                AppColors.warning,
                 Colors.white,
               ],
               numberOfParticles: 20,

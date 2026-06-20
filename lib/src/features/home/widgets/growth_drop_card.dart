@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supa;
 import '../../../core/app_colors.dart';
-import '../../../core/animated_widgets.dart';
+import '../../../core/app_gradients.dart';
+import '../../../core/app_typography.dart';
 import '../../../providers/growth_drop_provider.dart';
 import '../../../providers/user_provider.dart';
+import '../../../utils/haptic_utils.dart';
 
 class GrowthDropCard extends ConsumerStatefulWidget {
   const GrowthDropCard({super.key});
@@ -14,8 +17,34 @@ class GrowthDropCard extends ConsumerStatefulWidget {
   ConsumerState<GrowthDropCard> createState() => _GrowthDropCardState();
 }
 
-class _GrowthDropCardState extends ConsumerState<GrowthDropCard> {
+class _GrowthDropCardState extends ConsumerState<GrowthDropCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _scaleAnim;
   bool _generating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 100));
+    _scaleAnim = Tween(begin: 1.0, end: 0.985).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _onTapDown(TapDownDetails _) {
+    HapticUtils.light();
+    _ctrl.forward();
+  }
+
+  void _onTapUp(TapUpDetails _) => _ctrl.reverse();
+  void _onTapCancel() => _ctrl.reverse();
 
   Future<void> _generateToday() async {
     final user = ref.read(userProvider).valueOrNull;
@@ -63,229 +92,338 @@ class _GrowthDropCardState extends ConsumerState<GrowthDropCard> {
   @override
   Widget build(BuildContext context) {
     final drop = ref.watch(growthDropProvider);
-    final user = ref.watch(userProvider).valueOrNull;
+    final isAdmin = ref.watch(userProvider).valueOrNull?.isAdmin == true;
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.06),
-            blurRadius: 20,
-            offset: const Offset(0, 4),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: GestureDetector(
+        onTapDown: _onTapDown,
+        onTapUp: _onTapUp,
+        onTapCancel: _onTapCancel,
+        onTap: () {
+          if (drop.valueOrNull != null) context.push('/book');
+        },
+        child: AnimatedBuilder(
+          animation: _ctrl,
+          builder: (_, child) => Transform.scale(
+            scale: _scaleAnim.value,
+            child: child,
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppColors.primary, AppColors.pinkLight],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Center(
-                  child: Icon(
-                    Icons.water_drop_rounded,
-                    color: AppColors.white,
-                    size: 22,
-                  ),
-                ),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(32),
+              gradient: AppGradients.growthDropCardBg,
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.6),
+                width: 1.5,
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      "Today's Growth Drop",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.grey900,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      drop.valueOrNull?.focusArea ?? '',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w400,
-                        color: AppColors.grey500,
-                      ),
-                    ),
-                  ],
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 16,
+                  offset: const Offset(0, 8),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          if (_generating)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
+              ],
+            ),
+            padding: const EdgeInsets.all(24),
+            child: IntrinsicHeight(
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                  SizedBox(width: 10),
-                  Text(
-                    'Generating...',
-                    style: TextStyle(fontSize: 14, color: AppColors.grey500),
-                  ),
-                ],
-              ),
-            )
-          else if (drop.valueOrNull != null) ...[
-            Text(
-              'Discover ${drop.valueOrNull!.bookTitle} tailored to your growth journey.',
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w400,
-                color: AppColors.grey600,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: PressScale(
-                onTap: () => context.push('/book'),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppColors.primary, AppColors.pinkLight],
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        drop.valueOrNull!.isRead ? 'Review Drop' : 'Start',
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.white,
+                  // Left Content
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "✦ TODAY'S GROWTH DROP",
+                          style: AppTypography.captionInter.copyWith(color: AppColors.orangeAccentLight),
                         ),
-                      ),
-                      const SizedBox(width: 6),
-                      Icon(
-                        drop.valueOrNull!.isRead
-                            ? Icons.refresh_rounded
-                            : Icons.arrow_forward_rounded,
-                        color: AppColors.white,
-                        size: 18,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            if (user?.isAdmin == true) ...[
-              const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: PressScale(
-                  onTap: _generating ? null : _generateToday,
-                  haptic: false,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(
-                      color: AppColors.error.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
-                    ),
-                    child: _generating
-                        ? const SizedBox(
-                            height: 18,
-                            width: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                        const SizedBox(height: 8),
+                        Text(
+                          drop.valueOrNull?.bookTitle ?? 'Discovering your drop...',
+                          style: GoogleFonts.inter(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                            height: 1.15,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        if (drop.valueOrNull?.focusArea != null)
+                          Row(
                             children: [
-                              Icon(Icons.refresh_rounded, size: 16, color: AppColors.error),
-                              SizedBox(width: 6),
-                              Text(
-                                'Regenerate Drop (Admin)',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.error,
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.76),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                    '🎯 ${drop.valueOrNull!.focusArea}',
+                                    style: AppTypography.captionInter.copyWith(color: AppColors.orangeAccentDark),
                                 ),
                               ),
                             ],
                           ),
+                        const Spacer(),
+                        _CtaButton(
+                          label: drop.valueOrNull?.isRead == true ? 'Review' : 'Start Reading',
+                          onTap: () {
+                            if (drop.valueOrNull != null) {
+                              context.push('/book');
+                            } else {
+                              _generateToday();
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  // Right Content
+                  SizedBox(
+                    width: 125,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        // Spark / Action Area
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            GestureDetector(
+                              onTap: _generating ? null : _generateToday,
+                              child: Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.88),
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.05),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: _generating
+                                    ? const Padding(
+                                        padding: EdgeInsets.all(10),
+                                        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                                      )
+                                    : const Icon(Icons.auto_awesome_rounded, color: AppColors.purpleAccent, size: 18),
+                              ),
+                            ),
+                            if (isAdmin) ...[
+                              const SizedBox(height: 6),
+                              GestureDetector(
+                                onTap: _generating ? null : _generateToday,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.8),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: AppColors.grey300),
+                                  ),
+                                  child: _generating
+                                      ? const SizedBox(
+                                          width: 8,
+                                          height: 8,
+                                          child: CircularProgressIndicator(strokeWidth: 1.2),
+                                        )
+                                      : Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Icon(Icons.refresh_rounded, size: 8, color: AppColors.grey700),
+                                            const SizedBox(width: 2),
+                                            Text(
+                                              'Regenerate',
+                                              style: GoogleFonts.inter(
+                                                fontSize: 8,
+                                                fontWeight: FontWeight.w600,
+                                                color: AppColors.grey700,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        // Larger Book Cover Style Card
+                        AnimatedBuilder(
+                          animation: _ctrl,
+                          builder: (_, child) => Transform.translate(
+                            offset: Offset(0, -4 * _ctrl.value),
+                            child: child,
+                          ),
+                          child: Container(
+                            width: 125,
+                            height: 180,
+                            decoration: BoxDecoration(
+                              gradient: AppGradients.cardBgGradient,
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.22),
+                                  blurRadius: 12,
+                                  offset: const Offset(4, 8),
+                                ),
+                              ],
+                            ),
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const Icon(Icons.menu_book_rounded, color: AppColors.goldAccent, size: 12),
+                                ),
+                                const Spacer(),
+                                Text(
+                                  drop.valueOrNull?.bookTitle ?? 'Your Drop',
+                                  maxLines: 4,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.playfairDisplay(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                    height: 1.25,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  drop.valueOrNull?.bookAuthor ?? 'Growth Guide',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 9,
+                                    color: Colors.white70,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CtaButton extends StatefulWidget {
+  final String label;
+  final VoidCallback onTap;
+
+  const _CtaButton({required this.label, required this.onTap});
+
+  @override
+  State<_CtaButton> createState() => _CtaButtonState();
+}
+
+class _CtaButtonState extends State<_CtaButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _scaleAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 90));
+    _scaleAnim = Tween(begin: 1.0, end: 0.97).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _onTapDown(TapDownDetails _) {
+    HapticUtils.light();
+    _ctrl.forward();
+  }
+  void _onTapUp(TapUpDetails _) => _ctrl.reverse();
+  void _onTapCancel() => _ctrl.reverse();
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: _onTapDown,
+      onTapUp: _onTapUp,
+      onTapCancel: _onTapCancel,
+      onTap: widget.onTap,
+      child: AnimatedBuilder(
+        animation: _ctrl,
+        builder: (_, child) => Transform.scale(
+          scale: _scaleAnim.value,
+          child: child,
+        ),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          decoration: BoxDecoration(
+            color: AppColors.darkSurface,
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                widget.label,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 12),
+              AnimatedBuilder(
+                animation: _ctrl,
+                builder: (_, child) => Transform.translate(
+                  offset: Offset(3 * _ctrl.value, 0),
+                  child: child,
+                ),
+                child: Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.arrow_forward_rounded,
+                    color: Colors.white,
+                    size: 14,
                   ),
                 ),
               ),
             ],
-          ] else ...[
-            const Text(
-              'Ready for your next drop?',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w400,
-                color: AppColors.grey600,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: PressScale(
-                onTap: _generateToday,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppColors.primary, AppColors.pinkLight],
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        "Generate Today's Drop",
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.white,
-                        ),
-                      ),
-                      SizedBox(width: 6),
-                      Icon(
-                        Icons.auto_awesome_rounded,
-                        color: AppColors.white,
-                        size: 18,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ],
+          ),
+        ),
       ),
     );
   }

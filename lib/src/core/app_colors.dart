@@ -4,6 +4,8 @@ class AppColors {
   AppColors._();
 
   // Warm sanctuary palette
+  static const Color baseBackground = Color(0xFFFCFAF7);
+  static const Color secondarySurface = Color(0xFFFFFDF9);
   static const Color backgroundLight = Color(0xFFFCF9F5);
   static const Color backgroundDark = Color(0xFF1A1816);
 
@@ -44,6 +46,24 @@ class AppColors {
   static const Color xpStrategy = Color(0xFF8B5CF6);
   static const Color xpInfluence = Color(0xFFF97316);
   static const Color xpWealth = Color(0xFFF59E0B);
+
+  // Dashboard specific
+  static const Color scaffoldGrey = Color(0xFFF9F9F9);
+  static const Color textPrimary = Color(0xFF111111);
+  static const Color textSecondary = Color(0xFF494542);
+  static const Color textTertiary = Color(0xFF5E5956);
+  static const Color textQuaternary = Color(0xFF8A8582);
+
+  // Accents
+  static const Color orangeAccent = Color(0xFFE75B1B);
+  static const Color orangeAccentLight = Color(0xFFE46C22);
+  static const Color orangeAccentDark = Color(0xFFE06419);
+  static const Color purpleAccent = Color(0xFF8F45F5);
+  static const Color goldAccent = Color(0xFFD4A857);
+
+  // Dark surfaces
+  static const Color darkSurface = Color(0xFF2E2623);
+  static const Color darkSurfaceVariant = Color(0xFF1E1816);
 
   // Surface
   static const Color surfaceLight = Color(0xFFFCF9F5);

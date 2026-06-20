@@ -1,8 +1,11 @@
+import 'dart:math' show pi;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../core/app_colors.dart';
-import '../../../core/animated_widgets.dart';
+import '../../../core/app_gradients.dart';
+import '../../../core/app_typography.dart';
 import '../../../domain/models/growth_drop.dart';
 import '../../../providers/social_provider.dart';
 
@@ -14,16 +17,13 @@ class SocialDropsCard extends ConsumerStatefulWidget {
 }
 
 class _SocialDropsCardState extends ConsumerState<SocialDropsCard> {
-  String? _openingDropId;
-
   Future<void> _openDrop(dynamic drop) async {
     if (drop.bookData != null) {
       ref.read(socialProvider.notifier).markDropOpened(drop.id);
       if (context.mounted) context.push('/book', extra: drop.bookData);
       return;
     }
-    
-    // Show unpacking modal
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -48,10 +48,10 @@ class _SocialDropsCardState extends ConsumerState<SocialDropsCard> {
     try {
       final bookData = await ref.read(socialProvider.notifier).openBlindBox(drop.id);
       if (mounted) {
-        Navigator.of(context, rootNavigator: true).pop(); // Close modal
-        
+        Navigator.of(context, rootNavigator: true).pop();
+
         final parsedLessons = (bookData['lessons'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [];
-        
+
         context.push('/book', extra: GrowthDrop.fromJson({
           'id': drop.id,
           'date': drop.dropDate.toIso8601String(),
@@ -67,7 +67,7 @@ class _SocialDropsCardState extends ConsumerState<SocialDropsCard> {
       }
     } catch (e) {
       if (mounted) {
-        Navigator.of(context, rootNavigator: true).pop(); // Close modal on error
+        Navigator.of(context, rootNavigator: true).pop();
       }
     }
   }
@@ -84,153 +84,246 @@ class _SocialDropsCardState extends ConsumerState<SocialDropsCard> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Icon(Icons.card_giftcard, size: 18, color: AppColors.primary),
-            const SizedBox(width: 6),
-            const Text(
-              'Gifted for you',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: AppColors.grey900,
-              ),
+            Text(
+              'From your friends',
+              style: AppTypography.h2Inter.copyWith(color: AppColors.textPrimary),
             ),
-            const Spacer(),
             GestureDetector(
               onTap: () => context.push('/social'),
-              child: const Text(
-                'See all',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w600,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.8),
+                  borderRadius: BorderRadius.circular(18),
                 ),
+                  child: Text(
+                    'See all \u203A',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: drops.length,
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
-            childAspectRatio: 0.75,
+            childAspectRatio: 1.25,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
           ),
-          itemBuilder: (_, i) => _buildGridItem(drops[i]),
+          itemBuilder: (_, i) => _FriendGiftCard(
+            drop: drops[i],
+            colorIndex: i % 4,
+            onTap: () => _openDrop(drops[i]),
+          ),
         ),
       ],
     );
   }
+}
 
-  Widget _buildGridItem(dynamic drop) {
-    final isOpening = _openingDropId == drop.id;
+class _FriendGiftCard extends StatefulWidget {
+  final dynamic drop;
+  final int colorIndex;
+  final VoidCallback onTap;
 
-    if (drop.bookData != null) {
-      // Book cover style
-      return CardPress(
-        onTap: () => _openDrop(drop),
+  const _FriendGiftCard({
+    required this.drop,
+    required this.colorIndex,
+    required this.onTap,
+  });
+
+  @override
+  State<_FriendGiftCard> createState() => _FriendGiftCardState();
+}
+
+class _FriendGiftCardState extends State<_FriendGiftCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _scaleAnim;
+  late Animation<double> _rotateAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 120));
+    _scaleAnim = Tween(begin: 1.0, end: 0.98).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeOut),
+    );
+    _rotateAnim = Tween(begin: 0.0, end: -3 * (pi / 180)).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _onTapDown(TapDownDetails _) => _ctrl.forward();
+  void _onTapUp(TapUpDetails _) => _ctrl.reverse();
+  void _onTapCancel() => _ctrl.reverse();
+
+  @override
+  Widget build(BuildContext context) {
+    final gradients = [
+      AppGradients.socialDropPurple,
+      AppGradients.socialDropYellow,
+      AppGradients.socialDropPeach,
+      AppGradients.socialDropLavender,
+    ];
+
+    final colors = gradients[widget.colorIndex];
+    final isPurple = widget.colorIndex == 0 || widget.colorIndex == 3;
+    final giftAsset = isPurple ? 'assets/images/purple_gift.png' : 'assets/images/yellow_gift.png';
+
+    return GestureDetector(
+      onTapDown: _onTapDown,
+      onTapUp: _onTapUp,
+      onTapCancel: _onTapCancel,
+      onTap: widget.onTap,
+      child: AnimatedBuilder(
+        animation: _ctrl,
+        builder: (_, child) => Transform.scale(
+          scale: _scaleAnim.value,
+          child: child,
+        ),
         child: Container(
-          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [AppColors.primary, AppColors.pinkLight],
+            borderRadius: BorderRadius.circular(24),
+            gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
+              colors: colors,
             ),
-            borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.2),
-                blurRadius: 12,
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
             ],
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Stack(
             children: [
-              Row(
-                children: [
-                  const Spacer(),
-                  CircleAvatar(
-                    radius: 14,
-                    backgroundColor: AppColors.white.withValues(alpha: 0.3),
-                    child: Text(
-                      drop.senderProfile?.name[0].toUpperCase() ?? '?',
-                      style: const TextStyle(color: AppColors.white, fontSize: 12, fontWeight: FontWeight.bold),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 11,
+                          backgroundColor: Colors.white.withValues(alpha: 0.4),
+                          child: Text(
+                            widget.drop.senderProfile?.name?[0].toUpperCase() ?? '?',
+                            style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'A gift from ${widget.drop.senderProfile?.name ?? "Friend"}',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textSecondary,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
-              const Spacer(),
-              Text(
-                drop.bookData.bookTitle,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: AppColors.white,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 15,
-                  height: 1.3,
+                    const Spacer(),
+                    Padding(
+                      padding: const EdgeInsets.only(right: 42),
+                      child: SizedBox(
+                        height: 48,
+                        child: Align(
+                          alignment: Alignment.bottomLeft,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                widget.drop.bookData?.bookTitle ?? 'A Blind Box',
+                                style: GoogleFonts.inter(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textPrimary,
+                                  height: 1.15,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              if (widget.drop.bookData?.bookAuthor != null) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  'by ${widget.drop.bookData.bookAuthor}',
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    color: AppColors.textTertiary,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.7),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        'New drop',
+                        style: AppTypography.captionInter.copyWith(fontSize: 9, color: AppColors.textPrimary),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                drop.bookData.bookAuthor,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: AppColors.white.withValues(alpha: 0.7),
-                  fontSize: 12,
+              Positioned(
+                bottom: 8,
+                right: 8,
+                child: AnimatedBuilder(
+                  animation: _ctrl,
+                  builder: (_, child) => Transform.rotate(
+                    angle: _rotateAnim.value,
+                    child: child,
+                  ),
+                  child: Image.asset(
+                    giftAsset,
+                    width: 56,
+                    height: 56,
+                    fit: BoxFit.contain,
+                    color: Colors.white,
+                    colorBlendMode: BlendMode.multiply,
+                  ),
                 ),
               ),
             ],
           ),
-        ),
-      );
-    }
-
-    // Blind box style
-    return CardPress(
-      onTap: () => _openDrop(drop),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.primaryLight.withValues(alpha: 0.3)),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.06),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (isOpening)
-              const CircularProgressIndicator(strokeWidth: 2)
-            else
-              const Text('\u{1F4E6}', style: TextStyle(fontSize: 40)),
-            const SizedBox(height: 12),
-            Text(
-              'From ${drop.senderProfile?.name ?? "A Friend"}',
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.grey700,
-              ),
-            ),
-          ],
         ),
       ),
     );

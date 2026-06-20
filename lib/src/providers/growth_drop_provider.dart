@@ -89,3 +89,14 @@ GrowthDrop fromSupabase(Map<String, dynamic> json) {
     isSaved: json['is_saved'] as bool? ?? false,
   );
 }
+
+final readBooksCountProvider = FutureProvider<int>((ref) async {
+  final userId = supa.Supabase.instance.client.auth.currentUser?.id ?? '';
+  if (userId.isEmpty) return 0;
+  final response = await supa.Supabase.instance.client
+      .from('growth_drops')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('is_read', true);
+  return (response as List).length;
+});

@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/app_colors.dart';
+import '../../core/app_typography.dart';
 import '../../core/animated_widgets.dart';
 import '../../providers/growth_drop_provider.dart';
 import '../../providers/social_provider.dart';
@@ -105,21 +106,52 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
 
     if (dropState.isLoading || socialState.isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(color: AppColors.primary),
+      return const Scaffold(
+        backgroundColor: AppColors.scaffoldGrey,
+        body: Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
       );
     }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.only(left: 20, right: 20, top: 60, bottom: 100),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          EntranceFadeSlide(delayMs: 0, child: const HomeHeader()),
-          const SizedBox(height: 28),
-          EntranceFadeSlide(delayMs: 50, child: const GrowthDropCard()),
-          const SizedBox(height: 24),
-          EntranceFadeSlide(delayMs: 100, child: const SocialDropsCard()),
+    final topPadding = MediaQuery.of(context).padding.top;
+
+    return Scaffold(
+      backgroundColor: AppColors.scaffoldGrey,
+      body: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: SizedBox(height: topPadding + 32),
+          ),
+          SliverToBoxAdapter(
+            child: EntranceFadeSlide(
+              delayMs: 100,
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20),
+                child: HomeHeader(),
+              ),
+            ),
+          ),
+          const SliverToBoxAdapter(
+            child: EntranceFadeSlide(
+              delayMs: 180,
+              child: Padding(
+                padding: EdgeInsets.only(top: 24),
+                child: GrowthDropCard(),
+              ),
+            ),
+          ),
+          const SliverToBoxAdapter(
+            child: EntranceFadeSlide(
+              delayMs: 230,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(20, 24, 20, 0),
+                child: SocialDropsCard(),
+              ),
+            ),
+          ),
+          // Extra padding for bottom navigation
+          const SliverToBoxAdapter(child: SizedBox(height: 120)),
         ],
       ),
     );
@@ -155,11 +187,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             Text(
               "Ready for today's drop?",
               textAlign: TextAlign.center,
-              style: GoogleFonts.playfairDisplay(
-                fontSize: 24,
-                fontWeight: FontWeight.w700,
-                color: AppColors.grey900,
-              ),
+              style: AppTypography.h1Playfair.copyWith(color: AppColors.grey900),
             ),
             const SizedBox(height: 12),
             const Text(
@@ -304,11 +332,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             Text(
               'Your daily book is ready!',
               textAlign: TextAlign.center,
-              style: GoogleFonts.playfairDisplay(
-                fontSize: 24,
-                fontWeight: FontWeight.w700,
-                color: AppColors.grey900,
-              ),
+              style: AppTypography.h1Playfair.copyWith(color: AppColors.grey900),
             ),
             const SizedBox(height: 12),
             const Text(
@@ -361,3 +385,5 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 }
+
+

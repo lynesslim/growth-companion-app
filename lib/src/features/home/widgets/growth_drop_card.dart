@@ -34,8 +34,17 @@ class _GrowthDropCardState extends ConsumerState<GrowthDropCard> {
         ref.invalidate(growthDropProvider);
         setState(() => _generating = false);
       }
-    } catch (_) {
-      if (mounted) setState(() => _generating = false);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _generating = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to generate: $e'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 
@@ -153,20 +162,22 @@ class _GrowthDropCardState extends ConsumerState<GrowthDropCard> {
                     ),
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        'Start',
-                        style: TextStyle(
+                        drop.valueOrNull!.isRead ? 'Review Drop' : 'Start',
+                        style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
                           color: AppColors.white,
                         ),
                       ),
-                      SizedBox(width: 6),
+                      const SizedBox(width: 6),
                       Icon(
-                        Icons.arrow_forward_rounded,
+                        drop.valueOrNull!.isRead
+                            ? Icons.refresh_rounded
+                            : Icons.arrow_forward_rounded,
                         color: AppColors.white,
                         size: 18,
                       ),

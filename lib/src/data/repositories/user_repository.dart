@@ -26,15 +26,6 @@ class UserRepository {
     return user.copyWith(currentXp: newXp);
   }
 
-  Future<User> updateCompanion(String companionId) async {
-    if (_userId.isEmpty) throw Exception('Not authenticated');
-    await supa.Supabase.instance.client
-        .from('profiles')
-        .update({'selected_companion_id': companionId})
-        .eq('id', _userId);
-    return getUserProfile();
-  }
-
   Future<User> updateOnboardingData(User updatedUser) async {
     if (_userId.isEmpty) throw Exception('Not authenticated');
     await supa.Supabase.instance.client

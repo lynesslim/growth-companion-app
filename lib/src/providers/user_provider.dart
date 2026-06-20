@@ -35,15 +35,12 @@ class UserStateNotifier extends StateNotifier<AsyncValue<User>> {
   }
 
   Future<void> refresh() async {
+    state = const AsyncValue.loading();
     state = await AsyncValue.guard(() => _repository.getUserProfile());
   }
 
   Future<void> updateXp(int xp) async {
     state = await AsyncValue.guard(() => _repository.updateXp(xp));
-  }
-
-  Future<void> selectCompanion(String companionId) async {
-    state = await AsyncValue.guard(() => _repository.updateCompanion(companionId));
   }
 
   Future<void> saveOnboardingData(User updatedUser) async {

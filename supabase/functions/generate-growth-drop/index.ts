@@ -14,7 +14,7 @@ serve(async (req) => {
   }
 
   try {
-    const { user_id, onboarding_profile, weekly_intent, weekly_struggle, drop_date } = await req.json()
+    const { user_id, onboarding_profile, drop_date } = await req.json()
 
     // Create Supabase Admin client to bypass RLS for inserting growth drop
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
@@ -40,10 +40,8 @@ serve(async (req) => {
     const systemPrompt = promptData.prompt_text
     const userPrompt = `
     User Profile: ${JSON.stringify(onboarding_profile)}
-    Weekly Intent: ${weekly_intent}
-    Weekly Struggle: ${weekly_struggle}
     
-    Please generate 1 highly relevant non-fiction book and 3 micro-action quests for this specific user.
+    Please generate 1 highly relevant non-fiction book drop for this specific user.
     `
     
     const response = await openai.chat.completions.create({
@@ -57,6 +55,8 @@ serve(async (req) => {
 
     const resultStr = response.choices[0].message?.content
     const resultJson = JSON.parse(resultStr || '{}')
+    
+    const focusArea = (onboarding_profile && onboarding_profile.goals) ? onboarding_profile.goals.split(',')[0] : 'Personal Growth'
 
     // 3. Insert into growth_drops table
     const { error: insertError } = await supabaseAdmin
@@ -64,7 +64,7 @@ serve(async (req) => {
       .insert({
         user_id: user_id,
         drop_date: drop_date,
-        focus_area: weekly_intent,
+        focus_area: focusArea,
         recommended_books: [resultJson] // Passed as an array of 1 book to maintain schema backwards compatibility
       })
 

@@ -93,10 +93,10 @@ class _WeeklyFocusScreenState extends ConsumerState<WeeklyFocusScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Scaffold(
-          body: SafeArea(
+    return Scaffold(
+      body: Stack(
+        children: [
+          SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
@@ -268,38 +268,38 @@ class _WeeklyFocusScreenState extends ConsumerState<WeeklyFocusScreen> {
               ),
             ),
           ),
-        ),
-        if (_loading)
-          Container(
-            color: AppColors.white.withValues(alpha: 0.95),
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const SizedBox(
-                    width: 48,
-                    height: 48,
-                    child: CircularProgressIndicator(
-                      color: AppColors.primary,
-                      strokeWidth: 3,
+          if (_loading)
+            Container(
+              color: AppColors.white.withValues(alpha: 0.95),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(
+                      width: 48,
+                      height: 48,
+                      child: CircularProgressIndicator(
+                        color: AppColors.primary,
+                        strokeWidth: 3,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    'AI is designing your\ngrowth plan...',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.playfairDisplay(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.grey900,
-                      height: 1.3,
+                    const SizedBox(height: 24),
+                    Text(
+                      'AI is designing your\ngrowth plan...',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.playfairDisplay(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.grey900,
+                        height: 1.3,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }

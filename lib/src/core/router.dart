@@ -1,29 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../domain/models/growth_drop.dart';
 import '../features/auth/login_screen.dart';
 import '../features/dashboard/dashboard_shell.dart';
 import '../features/home/home_screen.dart';
 import '../features/journal/journal_screen.dart';
 import '../features/profile/profile_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
-import '../features/onboarding/companion_selection_screen.dart';
 import '../features/focus/weekly_focus_screen.dart';
-import '../features/onboarding/profile_created_screen.dart';
-import '../features/books/action_plans_screen.dart';
 import '../features/books/book_flip_screen.dart';
 import '../features/books/congrats_screen.dart';
-import '../features/growth/quest_detail_screen.dart';
+import '../features/books/streak_complete_screen.dart';
+import '../features/profile/settings_screen.dart';
+import '../features/social/social_screen.dart';
+import '../features/onboarding/blind_box_screen.dart';
 import '../providers/auth_provider.dart';
 import '../providers/user_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
 class RouterNotifier extends ChangeNotifier {
   final Ref _ref;
   RouterNotifier(this._ref) {
-    _ref.listen(authStateProvider, (_, __) => notifyListeners());
-    _ref.listen(userProvider, (_, __) => notifyListeners());
+    _ref.listen(authStateProvider, (_, _) => notifyListeners());
+    _ref.listen(userProvider, (_, _) => notifyListeners());
   }
 }
 
@@ -53,17 +55,23 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         final needsOnboarding = user == null || user.onboardingProfile.isEmpty;
         final onboardingRoutes = [
           '/onboarding',
-          '/companion-select',
           '/weekly-focus',
-          '/profile-created',
         ];
         final isCurrentlyOnboarding = onboardingRoutes.contains(state.matchedLocation) ||
             state.matchedLocation == '/congrats' ||
             state.matchedLocation == '/book' ||
-            state.matchedLocation == '/action-plans';
+            state.matchedLocation == '/streak';
         
         if (needsOnboarding && !isCurrentlyOnboarding) {
           return '/onboarding';
+        }
+
+        final strictOnboardingRoutes = [
+          '/onboarding',
+        ];
+        
+        if (!needsOnboarding && strictOnboardingRoutes.contains(state.matchedLocation)) {
+          return '/';
         }
         
         if (!needsOnboarding && isLoginRoute) {
@@ -82,6 +90,20 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const LoginScreen(),
       ),
+      GoRoute(
+        path: '/invite',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) {
+          final sender = state.uri.queryParameters['sender'];
+          if (sender != null) {
+            SharedPreferences.getInstance().then((prefs) {
+              prefs.setString('sender_id', sender);
+            });
+          }
+          Future.microtask(() => context.go('/onboarding'));
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        },
+      ),
       // Phase 2 flow: Onboarding -> Companion -> Weekly Focus -> Books -> Congrats -> Home
       GoRoute(
         path: '/onboarding',
@@ -89,9 +111,9 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const OnboardingScreen(),
       ),
       GoRoute(
-        path: '/companion-select',
+        path: '/blind-box',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const CompanionSelectionScreen(),
+        builder: (context, state) => BlindBoxScreen(senderId: state.extra as String),
       ),
       GoRoute(
         path: '/weekly-focus',
@@ -99,32 +121,24 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const WeeklyFocusScreen(),
       ),
       GoRoute(
-        path: '/profile-created',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const ProfileCreatedScreen(),
-      ),
-      GoRoute(
         path: '/book',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const BookFlipScreen(),
+        builder: (context, state) => BookFlipScreen(book: state.extra as GrowthDrop?),
       ),
       GoRoute(
-        path: '/action-plans',
+        path: '/settings',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const ActionPlansScreen(),
+        builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/streak',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const StreakCompleteScreen(),
       ),
       GoRoute(
         path: '/congrats',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const CongratsScreen(),
-      ),
-      GoRoute(
-        path: '/quest/:id',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) {
-          final id = state.pathParameters['id'] ?? '0';
-          return QuestDetailScreen(questId: id);
-        },
       ),
       // Dashboard shell with bottom nav (landing after onboarding)
       StatefulShellRoute.indexedStack(
@@ -138,6 +152,14 @@ final goRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/',
                 builder: (context, state) => const HomeScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/social',
+                builder: (context, state) => const SocialScreen(),
               ),
             ],
           ),

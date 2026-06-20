@@ -5,7 +5,6 @@ class User {
   final int currentXp;
   final int level;
   final int currentStreak;
-  final String? selectedCompanionId;
 
   const User({
     required this.id,
@@ -14,7 +13,6 @@ class User {
     this.currentXp = 0,
     this.level = 1,
     this.currentStreak = 0,
-    this.selectedCompanionId,
   });
 
   User copyWith({
@@ -24,7 +22,6 @@ class User {
     int? currentXp,
     int? level,
     int? currentStreak,
-    String? selectedCompanionId,
   }) {
     return User(
       id: id ?? this.id,
@@ -33,7 +30,6 @@ class User {
       currentXp: currentXp ?? this.currentXp,
       level: level ?? this.level,
       currentStreak: currentStreak ?? this.currentStreak,
-      selectedCompanionId: selectedCompanionId ?? this.selectedCompanionId,
     );
   }
 
@@ -44,7 +40,6 @@ class User {
         'current_xp': currentXp,
         'level': level,
         'current_streak': currentStreak,
-        'selected_companion_id': selectedCompanionId,
       };
 
   factory User.fromJson(Map<String, dynamic> json) => User(
@@ -56,7 +51,6 @@ class User {
         currentXp: (json['current_xp'] as num?)?.toInt() ?? 0,
         level: (json['level'] as num?)?.toInt() ?? 1,
         currentStreak: (json['current_streak'] as num?)?.toInt() ?? 0,
-        selectedCompanionId: json['selected_companion_id'] as String?,
       );
 
   @override
@@ -67,9 +61,8 @@ class User {
           name == other.name &&
           currentXp == other.currentXp &&
           level == other.level &&
-          currentStreak == other.currentStreak &&
-          selectedCompanionId == other.selectedCompanionId;
+          currentStreak == other.currentStreak;
 
   @override
-  int get hashCode => Object.hash(id, name, currentXp, level, currentStreak, selectedCompanionId);
+  int get hashCode => Object.hash(id, name, currentXp, level, currentStreak);
 }

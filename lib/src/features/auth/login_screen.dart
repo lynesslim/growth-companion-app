@@ -53,9 +53,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       // Navigation happens automatically via GoRouter redirect on auth change
     } catch (e) {
       if (!mounted) return;
+      final msg = e.toString().replaceFirst('Exception: ', '');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          content: Row(
+            children: [
+              const Icon(Icons.error_outline, color: AppColors.white, size: 20),
+              const SizedBox(width: 12),
+              Expanded(child: Text(msg)),
+            ],
+          ),
+          backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),

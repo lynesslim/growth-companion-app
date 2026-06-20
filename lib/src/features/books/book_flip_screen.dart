@@ -2,13 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/app_colors.dart';
 import '../../domain/models/growth_drop.dart';
 import '../../providers/growth_drop_provider.dart';
 import '../../utils/haptic_utils.dart';
 
 class BookFlipScreen extends ConsumerStatefulWidget {
-  const BookFlipScreen({super.key});
+  final GrowthDrop? book;
+  const BookFlipScreen({super.key, this.book});
 
   @override
   ConsumerState<BookFlipScreen> createState() => _BookFlipScreenState();
@@ -21,18 +23,18 @@ class _BookFlipScreenState extends ConsumerState<BookFlipScreen> {
 
   static const _pageNames = [
     'Cover',
-    'Overview',
+    'Why This Book',
     'Lesson 1',
     'Lesson 2',
     'Lesson 3',
-    'First Chapter',
+    'Summary',
   ];
 
   void _nextPage(GrowthDrop book) {
     HapticUtils.light();
     if (_isAnimating) return;
     if (_currentPage >= _pageNames.length - 1) {
-      context.push('/action-plans');
+      context.push('/streak', extra: book);
       return;
     }
     _isAnimating = true;
@@ -60,6 +62,8 @@ class _BookFlipScreenState extends ConsumerState<BookFlipScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.book != null) return _buildBookUI(widget.book!);
+
     final dropAsync = ref.watch(growthDropProvider);
 
     return dropAsync.when(
@@ -125,14 +129,35 @@ class _BookFlipScreenState extends ConsumerState<BookFlipScreen> {
                   Text(
                     '${_currentPage + 1}/${_pageNames.length}',
                     style: const TextStyle(
-                      fontSize: 13,
-                      color: AppColors.grey500,
-                      fontWeight: FontWeight.w500,
+                      color: AppColors.grey400,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
                     ),
                   ),
                 ],
               ),
             ),
+            if (book.giftedBy != null) ...[
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.card_giftcard, size: 16, color: AppColors.primary),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Gifted by ${book.giftedBy}',
+                      style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
@@ -251,7 +276,7 @@ class _BookFlipScreenState extends ConsumerState<BookFlipScreen> {
       case 0:
         return _CoverPage(book: book);
       case 1:
-        return _SummaryPage(book: book);
+        return _WhatItsAboutPage(book: book);
       case 2:
       case 3:
       case 4:
@@ -260,9 +285,46 @@ class _BookFlipScreenState extends ConsumerState<BookFlipScreen> {
           lesson: book.lessons.length > index - 2 ? book.lessons[index - 2] : '',
         );
       case 5:
-        return _FirstChapterPage(book: book);
+        return _FinalSummaryPage(
+          book: book,
+          onSaveToJournal: book.giftedBy != null
+              ? () => _saveSocialDropToJournal(book)
+              : null,
+        );
       default:
         return const SizedBox();
+    }
+  }
+
+  Future<void> _saveSocialDropToJournal(GrowthDrop book) async {
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
+    if (user == null) return;
+    try {
+      await supabase.from('growth_drops').insert({
+        'user_id': user.id,
+        'drop_date': DateTime.now().toIso8601String().split('T')[0],
+        'focus_area': book.focusArea,
+        'recommended_books': {
+          'bookTitle': book.bookTitle,
+          'bookAuthor': book.bookAuthor,
+          'whatItsAbout': book.whatItsAbout,
+          'lessons': book.lessons,
+          'summary': book.summary,
+        },
+        'is_read': true,
+      });
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Saved to your journal!')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not save: $e')),
+        );
+      }
     }
   }
 }
@@ -334,39 +396,23 @@ class _CoverPage extends StatelessWidget {
               color: AppColors.white.withValues(alpha: 0.7),
             ),
           ),
-          const Spacer(),
-          Text(
-            'Why this book this week',
-            style: TextStyle(
-              fontSize: 13,
-              color: AppColors.white.withValues(alpha: 0.7),
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            book.summary,
-            maxLines: 4,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 14,
-              height: 1.4,
-              color: AppColors.white.withValues(alpha: 0.85),
-            ),
-          ),
         ],
       ),
     );
   }
 }
 
-class _SummaryPage extends StatelessWidget {
+class _WhatItsAboutPage extends StatelessWidget {
   final GrowthDrop book;
 
-  const _SummaryPage({required this.book});
+  const _WhatItsAboutPage({required this.book});
 
   @override
   Widget build(BuildContext context) {
+    final points = book.whatItsAbout
+        .split('\n')
+        .where((l) => l.trim().isNotEmpty)
+        .toList();
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(28),
@@ -406,15 +452,37 @@ class _SummaryPage extends StatelessWidget {
               color: AppColors.grey900,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Expanded(
-            child: SingleChildScrollView(
-              child: Text(
-                book.summary,
-                style: const TextStyle(
-                  fontSize: 15,
-                  height: 1.7,
-                  color: AppColors.grey600,
+            child: Scrollbar(
+              thumbVisibility: true,
+              child: ListView.separated(
+                itemCount: points.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 12),
+                itemBuilder: (context, index) => Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.only(top: 6),
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: AppColors.primary,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        points[index],
+                        style: const TextStyle(
+                          fontSize: 15,
+                          height: 1.7,
+                          color: AppColors.grey600,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -486,13 +554,16 @@ class _LessonPage extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Expanded(
-            child: SingleChildScrollView(
-              child: Text(
-                lesson,
-                style: const TextStyle(
-                  fontSize: 15,
-                  height: 1.7,
-                  color: AppColors.grey600,
+            child: Scrollbar(
+              thumbVisibility: true,
+              child: SingleChildScrollView(
+                child: Text(
+                  lesson,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    height: 1.7,
+                    color: AppColors.grey600,
+                  ),
                 ),
               ),
             ),
@@ -503,13 +574,18 @@ class _LessonPage extends StatelessWidget {
   }
 }
 
-class _FirstChapterPage extends StatelessWidget {
+class _FinalSummaryPage extends StatelessWidget {
   final GrowthDrop book;
+  final VoidCallback? onSaveToJournal;
 
-  const _FirstChapterPage({required this.book});
+  const _FinalSummaryPage({required this.book, this.onSaveToJournal});
 
   @override
   Widget build(BuildContext context) {
+    final points = book.summary
+        .split('\n')
+        .where((l) => l.trim().isNotEmpty)
+        .toList();
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(28),
@@ -535,14 +611,14 @@ class _FirstChapterPage extends StatelessWidget {
               borderRadius: BorderRadius.circular(14),
             ),
             child: const Icon(
-              Icons.bookmark_rounded,
+              Icons.summarize_rounded,
               color: AppColors.primary,
               size: 22,
             ),
           ),
           const SizedBox(height: 20),
           Text(
-            'Chapter to read first',
+            'Key Takeaways',
             style: GoogleFonts.playfairDisplay(
               fontSize: 22,
               fontWeight: FontWeight.w700,
@@ -551,18 +627,40 @@ class _FirstChapterPage extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Expanded(
-            child: SingleChildScrollView(
-              child: Text(
-                book.firstChapter,
-                style: const TextStyle(
-                  fontSize: 15,
-                  height: 1.7,
-                  color: AppColors.grey600,
+            child: Scrollbar(
+              thumbVisibility: true,
+              child: ListView.separated(
+                itemCount: points.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 12),
+                itemBuilder: (context, index) => Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.only(top: 6),
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: AppColors.primary,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        points[index],
+                        style: const TextStyle(
+                          fontSize: 15,
+                          height: 1.7,
+                          color: AppColors.grey600,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
           ),
-          const Spacer(),
+          const SizedBox(height: 24),
           SizedBox(
             width: double.infinity,
             child: Container(
@@ -595,7 +693,7 @@ class _FirstChapterPage extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(
-                      Icons.rocket_launch_rounded,
+                      Icons.local_fire_department_rounded,
                       color: AppColors.white,
                       size: 22,
                     ),
@@ -606,7 +704,7 @@ class _FirstChapterPage extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Ready for more?',
+                          'Amazing work!',
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
@@ -615,7 +713,7 @@ class _FirstChapterPage extends StatelessWidget {
                         ),
                         SizedBox(height: 2),
                         Text(
-                          'Complete all 3 books to unlock your weekly growth plan.',
+                          'You finished this drop. Swipe up to continue your streak.',
                           style: TextStyle(
                             fontSize: 12,
                             color: AppColors.grey500,
@@ -628,6 +726,40 @@ class _FirstChapterPage extends StatelessWidget {
               ),
             ),
           ),
+          if (onSaveToJournal != null) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: GestureDetector(
+                onTap: onSaveToJournal,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.bookmark_add_rounded, size: 18, color: AppColors.primary),
+                      SizedBox(width: 8),
+                      Text(
+                        'Save to my Journal',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

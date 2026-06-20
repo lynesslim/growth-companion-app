@@ -21,11 +21,36 @@ class _SocialDropsCardState extends ConsumerState<SocialDropsCard> {
       if (context.mounted) context.push('/book', extra: drop.bookData);
       return;
     }
-    setState(() => _openingDropId = drop.id);
+    
+    // Show unpacking modal
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        contentPadding: const EdgeInsets.all(32),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('\u{1F4E6}', style: TextStyle(fontSize: 48)),
+            const SizedBox(height: 24),
+            const CircularProgressIndicator(color: AppColors.primary),
+            const SizedBox(height: 24),
+            Text('Unpacking drop from ${drop.senderProfile?.name ?? 'a friend'}...',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+          ],
+        ),
+      ),
+    );
+
     try {
       final bookData = await ref.read(socialProvider.notifier).openBlindBox(drop.id);
       if (mounted) {
-        setState(() => _openingDropId = null);
+        Navigator.of(context, rootNavigator: true).pop(); // Close modal
+        
+        final parsedLessons = (bookData['lessons'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [];
+        
         context.push('/book', extra: GrowthDrop.fromJson({
           'id': drop.id,
           'date': drop.dropDate.toIso8601String(),
@@ -33,7 +58,7 @@ class _SocialDropsCardState extends ConsumerState<SocialDropsCard> {
           'bookTitle': bookData['bookTitle'] ?? '',
           'bookAuthor': bookData['bookAuthor'] ?? '',
           'whatItsAbout': bookData['whatItsAbout'] ?? '',
-          'lessons': bookData['lessons'] ?? [],
+          'lessons': parsedLessons,
           'summary': bookData['summary'] ?? '',
           'isRead': true,
           'giftedBy': drop.senderProfile?.name,
@@ -41,7 +66,7 @@ class _SocialDropsCardState extends ConsumerState<SocialDropsCard> {
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _openingDropId = null);
+        Navigator.of(context, rootNavigator: true).pop(); // Close modal on error
       }
     }
   }

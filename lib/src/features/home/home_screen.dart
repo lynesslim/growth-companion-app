@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/app_colors.dart';
 import '../../providers/growth_drop_provider.dart';
+import '../../providers/social_provider.dart';
 import 'widgets/home_header.dart';
 import 'widgets/growth_drop_card.dart';
 import 'widgets/social_drops_card.dart';
@@ -17,6 +20,45 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _modalShown = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _processInvite());
+  }
+
+  Future<void> _processInvite() async {
+    final prefs = await SharedPreferences.getInstance();
+    final senderId = prefs.getString('sender_id');
+    if (senderId == null) return;
+    await prefs.remove('sender_id');
+
+    final supabase = Supabase.instance.client;
+    final userId = supabase.auth.currentUser?.id;
+    if (userId == null) return;
+
+    try {
+      await supabase.from('friends').insert({
+        'user_id_1': senderId,
+        'user_id_2': userId,
+        'status': 'accepted',
+      });
+      await supabase.from('social_drops').insert({
+        'sender_id': senderId,
+        'recipient_id': userId,
+        'is_opened': false,
+        'drop_date': DateTime.now().toIso8601String().split('T')[0],
+      });
+      ref.invalidate(socialProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("You've received a blind box from your friend!")),
+        );
+      }
+    } catch (_) {
+      // ponytail: duplicates or already processed, silently ignore
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

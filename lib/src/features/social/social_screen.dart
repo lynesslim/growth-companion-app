@@ -452,10 +452,19 @@ class _SocialScreenState extends ConsumerState<SocialScreen> {
                 ),
                 title: const Text('Send Blind Box (AI)'),
                 subtitle: const Text('AI generates a book based on their goals'),
-                onTap: () {
+                onTap: () async {
                   Navigator.pop(ctx);
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Generating and sending...')));
-                  ref.read(socialProvider.notifier).sendDrop(friendId);
+                  try {
+                    await ref.read(socialProvider.notifier).sendDrop(friendId);
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text(e.toString().replaceAll('Exception: ', '')),
+                        backgroundColor: AppColors.error,
+                      ));
+                    }
+                  }
                 },
               ),
               const Divider(),

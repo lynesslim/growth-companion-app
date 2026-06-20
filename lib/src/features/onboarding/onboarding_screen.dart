@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/app_colors.dart';
 import '../../providers/user_provider.dart';
 import '../../utils/haptic_utils.dart';
@@ -210,24 +209,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
           onDone: _submit,
         );
       case 10:
-        return _PlanScreen(onNext: () async {
-          final prefs = await SharedPreferences.getInstance();
-          final senderId = prefs.getString('sender_id');
-          if (senderId != null && context.mounted) {
-            context.push('/blind-box', extra: senderId);
-          } else if (context.mounted) {
-            context.push('/book');
-          }
+        return _PlanScreen(onNext: () {
+          if (context.mounted) context.go('/');
         });
       case 11:
-        return _FirstSessionScreen(onStart: () async {
-          final prefs = await SharedPreferences.getInstance();
-          final senderId = prefs.getString('sender_id');
-          if (senderId != null && context.mounted) {
-            context.push('/blind-box', extra: senderId);
-          } else if (context.mounted) {
-            context.push('/book');
-          }
+        return _FirstSessionScreen(onStart: () {
+          if (context.mounted) context.go('/');
         });
       default:
         return const SizedBox();

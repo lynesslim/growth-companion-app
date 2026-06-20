@@ -11,14 +11,16 @@ class GrowthDropNotifier extends AsyncNotifier<GrowthDrop?> {
     final userId = supa.Supabase.instance.client.auth.currentUser?.id ?? '';
     if (userId.isEmpty) return null;
     final today = DateTime.now().toIso8601String().split('T')[0];
-    final data = await supa.Supabase.instance.client
+    final response = await supa.Supabase.instance.client
         .from('growth_drops')
         .select()
         .eq('user_id', userId)
         .eq('drop_date', today)
-        .maybeSingle();
-    if (data == null) return null;
-    return fromSupabase(data);
+        .order('created_at', ascending: false)
+        .limit(1);
+
+    if (response.isEmpty) return null;
+    return fromSupabase(response.first);
   }
 
   Future<void> markAsRead() async {
@@ -29,6 +31,16 @@ class GrowthDropNotifier extends AsyncNotifier<GrowthDrop?> {
         .update({'is_read': true})
         .eq('id', drop.id);
     state = AsyncValue.data(drop.copyWith(isRead: true));
+  }
+
+  Future<void> saveToJournal() async {
+    final drop = state.valueOrNull;
+    if (drop == null || drop.isSaved) return;
+    await supa.Supabase.instance.client
+        .from('growth_drops')
+        .update({'is_saved': true})
+        .eq('id', drop.id);
+    state = AsyncValue.data(drop.copyWith(isSaved: true));
   }
 }
 
@@ -74,5 +86,6 @@ GrowthDrop fromSupabase(Map<String, dynamic> json) {
         : [],
     summary: parseList('summary'),
     isRead: json['is_read'] as bool? ?? false,
+    isSaved: json['is_saved'] as bool? ?? false,
   );
 }

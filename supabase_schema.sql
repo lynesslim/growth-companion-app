@@ -82,6 +82,7 @@ CREATE TABLE growth_drops (
   focus_area TEXT NOT NULL,
   recommended_books JSONB NOT NULL, -- Array of book objects (title, summary, lessons)
   is_read BOOLEAN DEFAULT FALSE,
+  is_saved BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -177,5 +178,16 @@ BEGIN
     )
   ORDER BY p.name ASC
   LIMIT 20;
+END;
+$$;
+
+-- 10. count_user_drops RPC (SECURITY DEFINER)
+-- Returns saved book count for profile display (bypasses RLS)
+CREATE OR REPLACE FUNCTION public.count_user_drops(target_user_id UUID)
+RETURNS BIGINT
+LANGUAGE plpgsql SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN (SELECT COUNT(*) FROM public.growth_drops WHERE user_id = target_user_id AND is_saved = true);
 END;
 $$;

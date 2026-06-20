@@ -1,25 +1,56 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 import '../../core/app_colors.dart';
 import '../../domain/models/user.dart';
 import '../../providers/social_provider.dart';
 
-class FriendProfileScreen extends ConsumerWidget {
+class FriendProfileScreen extends ConsumerStatefulWidget {
   final User profile;
 
   const FriendProfileScreen({super.key, required this.profile});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<FriendProfileScreen> createState() => _FriendProfileScreenState();
+}
+
+class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
+  int _booksRead = 0;
+  bool _loadingBooks = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBooksCount();
+  }
+
+  Future<void> _loadBooksCount() async {
+    try {
+      final count = await Supabase.instance.client
+          .rpc('count_user_drops', params: {'target_user_id': widget.profile.id});
+      if (mounted) {
+        setState(() {
+          _booksRead = (count as num?)?.toInt() ?? 0;
+          _loadingBooks = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingBooks = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final socialState = ref.watch(socialProvider).valueOrNull;
 
     final existingFriend = socialState?.acceptedFriends.where((f) =>
-        f.userId1 == profile.id || f.userId2 == profile.id).firstOrNull;
+        f.userId1 == widget.profile.id || f.userId2 == widget.profile.id).firstOrNull;
     final pendingRequest = socialState?.pendingRequests.where((f) =>
-        f.userId1 == profile.id).firstOrNull;
+        f.userId1 == widget.profile.id).firstOrNull;
     final outgoingRequest = socialState?.outgoingRequests.where((f) =>
-        f.userId2 == profile.id).firstOrNull;
+        f.userId2 == widget.profile.id).firstOrNull;
 
     Widget? actionButton;
     if (existingFriend != null) {
@@ -88,10 +119,10 @@ class FriendProfileScreen extends ConsumerWidget {
       actionButton = ElevatedButton.icon(
         onPressed: () async {
           try {
-            await ref.read(socialProvider.notifier).sendFriendRequest(profile.id);
+            await ref.read(socialProvider.notifier).sendFriendRequest(widget.profile.id);
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Friend request sent to ${profile.name}!')),
+                SnackBar(content: Text('Friend request sent to ${widget.profile.name}!')),
               );
             }
           } catch (e) {
@@ -123,34 +154,106 @@ class FriendProfileScreen extends ConsumerWidget {
           onPressed: () => context.pop(),
         ),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24),
         child: Column(
           children: [
             const SizedBox(height: 20),
-            CircleAvatar(
-              radius: 48,
-              backgroundColor: AppColors.primaryLight,
-              child: Text(
-                profile.name[0].toUpperCase(),
-                style: const TextStyle(fontSize: 36, color: AppColors.white, fontWeight: FontWeight.bold),
+            // Avatar with gradient
+            Container(
+              width: 96,
+              height: 96,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [AppColors.primaryLight, AppColors.pinkLight],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(28),
+              ),
+              child: Center(
+                child: Text(
+                  widget.profile.name[0].toUpperCase(),
+                  style: const TextStyle(fontSize: 40, color: AppColors.white, fontWeight: FontWeight.bold),
+                ),
               ),
             ),
             const SizedBox(height: 20),
             Text(
-              profile.name,
-              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.grey900),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Level ${profile.level} \u2022 ${profile.currentXp} XP',
-              style: const TextStyle(fontSize: 16, color: AppColors.grey500),
+              widget.profile.name,
+              style: GoogleFonts.playfairDisplay(
+                fontSize: 28,
+                fontWeight: FontWeight.w700,
+                color: AppColors.grey900,
+              ),
             ),
             const SizedBox(height: 32),
+
+            // Stats card
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.06),
+                    blurRadius: 20,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _StatItem(icon: Icons.menu_book_rounded, label: 'Books', value: _loadingBooks ? '-' : '$_booksRead'),
+                  _StatItem(icon: Icons.auto_awesome_rounded, label: 'Level', value: '${widget.profile.level}'),
+                  _StatItem(icon: Icons.stars_rounded, label: 'XP', value: '${widget.profile.currentXp}'),
+                  _StatItem(icon: Icons.local_fire_department_rounded, label: 'Streak', value: '${widget.profile.currentStreak}'),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 32),
+
+            // Friend action button
             actionButton,
           ],
         ),
       ),
+    );
+  }
+}
+
+class _StatItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _StatItem({required this.icon, required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 22, color: AppColors.primary),
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: GoogleFonts.playfairDisplay(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: AppColors.grey900,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12, color: AppColors.grey500, fontWeight: FontWeight.w500),
+        ),
+      ],
     );
   }
 }

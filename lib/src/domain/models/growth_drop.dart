@@ -8,6 +8,7 @@ class GrowthDrop {
   final List<String> lessons;
   final String summary;
   final bool isRead;
+  final bool isSaved;
   final String? giftedBy;
 
   const GrowthDrop({
@@ -20,10 +21,11 @@ class GrowthDrop {
     required this.lessons,
     required this.summary,
     this.isRead = false,
+    this.isSaved = false,
     this.giftedBy,
   });
 
-  GrowthDrop copyWith({bool? isRead}) => GrowthDrop(
+  GrowthDrop copyWith({bool? isRead, bool? isSaved}) => GrowthDrop(
         id: id,
         date: date,
         focusArea: focusArea,
@@ -33,6 +35,7 @@ class GrowthDrop {
         lessons: lessons,
         summary: summary,
         isRead: isRead ?? this.isRead,
+        isSaved: isSaved ?? this.isSaved,
         giftedBy: giftedBy,
       );
 
@@ -46,6 +49,7 @@ class GrowthDrop {
         'lessons': lessons,
         'summary': summary,
         'isRead': isRead,
+        'isSaved': isSaved,
         'giftedBy': giftedBy,
       };
 
@@ -59,6 +63,7 @@ class GrowthDrop {
         lessons: (json['lessons'] as List<dynamic>).cast<String>(),
         summary: json['summary'] as String,
         isRead: json['isRead'] as bool? ?? false,
+        isSaved: json['isSaved'] as bool? ?? false,
         giftedBy: json['giftedBy'] as String?,
       );
 }

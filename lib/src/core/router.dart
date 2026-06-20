@@ -16,10 +16,9 @@ import '../features/books/streak_complete_screen.dart';
 import '../features/profile/settings_screen.dart';
 import '../features/social/friend_profile_screen.dart';
 import '../features/social/social_screen.dart';
-import '../features/onboarding/blind_box_screen.dart';
+import '../features/onboarding/invite_landing_screen.dart';
 import '../providers/auth_provider.dart';
 import '../providers/user_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -50,7 +49,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       final isAuthenticated = authState.valueOrNull != null;
       final isLoginRoute = state.matchedLocation == '/login';
       
-      if (!isAuthenticated && !isLoginRoute) return '/login';
+      if (!isAuthenticated && !isLoginRoute && state.matchedLocation != '/invite') return '/login';
       
       if (isAuthenticated) {
         final user = userState.valueOrNull;
@@ -95,27 +94,15 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/invite',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) {
-          final sender = state.uri.queryParameters['sender'];
-          if (sender != null) {
-            SharedPreferences.getInstance().then((prefs) {
-              prefs.setString('sender_id', sender);
-            });
-          }
-          Future.microtask(() => context.go('/onboarding'));
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
-        },
+        builder: (context, state) => InviteLandingScreen(
+          senderId: state.uri.queryParameters['sender'] ?? '',
+        ),
       ),
-      // Phase 2 flow: Onboarding -> Companion -> Weekly Focus -> Books -> Congrats -> Home
+      // Phase 2 flow: Onboarding -> Weekly Focus -> Books -> Congrats -> Home
       GoRoute(
         path: '/onboarding',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const OnboardingScreen(),
-      ),
-      GoRoute(
-        path: '/blind-box',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => BlindBoxScreen(senderId: state.extra as String),
       ),
       GoRoute(
         path: '/weekly-focus',
@@ -125,7 +112,13 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/book',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => BookFlipScreen(book: state.extra as GrowthDrop?),
+        builder: (context, state) {
+          final extra = state.extra;
+          GrowthDrop? book;
+          if (extra is GrowthDrop) book = extra;
+          else if (extra is Map) book = GrowthDrop.fromJson(Map<String, dynamic>.from(extra));
+          return BookFlipScreen(book: book);
+        },
       ),
       GoRoute(
         path: '/settings',
@@ -135,7 +128,13 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/streak',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => StreakCompleteScreen(book: state.extra as GrowthDrop?),
+        builder: (context, state) {
+          final extra = state.extra;
+          GrowthDrop? book;
+          if (extra is GrowthDrop) book = extra;
+          else if (extra is Map) book = GrowthDrop.fromJson(Map<String, dynamic>.from(extra));
+          return StreakCompleteScreen(book: book);
+        },
       ),
       GoRoute(
         path: '/friend-profile',

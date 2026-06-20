@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/app_colors.dart';
 import '../../domain/models/growth_drop.dart';
 import '../../providers/growth_drop_provider.dart';
@@ -38,6 +37,7 @@ class _BookFlipScreenState extends ConsumerState<BookFlipScreen> {
       if (book.giftedBy == null) {
         ref.read(userProvider.notifier).updateStreak();
       }
+      ref.read(growthDropProvider.notifier).markAsRead();
       context.push('/streak', extra: book);
       return;
     }
@@ -289,48 +289,12 @@ class _BookFlipScreenState extends ConsumerState<BookFlipScreen> {
           lesson: book.lessons.length > index - 2 ? book.lessons[index - 2] : '',
         );
       case 5:
-        return _FinalSummaryPage(
-          book: book,
-          onSaveToJournal: book.giftedBy != null
-              ? () => _saveSocialDropToJournal(book)
-              : null,
-        );
+        return _FinalSummaryPage(book: book);
       default:
         return const SizedBox();
     }
   }
 
-  Future<void> _saveSocialDropToJournal(GrowthDrop book) async {
-    final supabase = Supabase.instance.client;
-    final user = supabase.auth.currentUser;
-    if (user == null) return;
-    try {
-      await supabase.from('growth_drops').insert({
-        'user_id': user.id,
-        'drop_date': DateTime.now().toIso8601String().split('T')[0],
-        'focus_area': book.focusArea,
-        'recommended_books': {
-          'bookTitle': book.bookTitle,
-          'bookAuthor': book.bookAuthor,
-          'whatItsAbout': book.whatItsAbout,
-          'lessons': book.lessons,
-          'summary': book.summary,
-        },
-        'is_read': true,
-      });
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Saved to your journal!')),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not save: $e')),
-        );
-      }
-    }
-  }
 }
 
 class _CoverPage extends StatelessWidget {
@@ -580,9 +544,8 @@ class _LessonPage extends StatelessWidget {
 
 class _FinalSummaryPage extends StatelessWidget {
   final GrowthDrop book;
-  final VoidCallback? onSaveToJournal;
 
-  const _FinalSummaryPage({required this.book, this.onSaveToJournal});
+  const _FinalSummaryPage({required this.book});
 
   @override
   Widget build(BuildContext context) {
@@ -730,40 +693,6 @@ class _FinalSummaryPage extends StatelessWidget {
               ),
             ),
           ),
-          if (onSaveToJournal != null) ...[
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: GestureDetector(
-                onTap: onSaveToJournal,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: AppColors.primary.withValues(alpha: 0.2),
-                    ),
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.bookmark_add_rounded, size: 18, color: AppColors.primary),
-                      SizedBox(width: 8),
-                      Text(
-                        'Save to my Journal',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
         ],
       ),
     );

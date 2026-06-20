@@ -18,17 +18,32 @@ class _GrowthDropCardState extends ConsumerState<GrowthDropCard> {
   bool _generating = false;
 
   Future<void> _generateToday() async {
+    final goal = ref.read(currentWeeklyGoalProvider).valueOrNull;
     final user = ref.read(userProvider).valueOrNull;
-    if (user == null) return;
+    if (goal == null && user == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Set a weekly focus first'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
     setState(() => _generating = true);
     try {
+      final body = <String, dynamic>{
+        'user_id': user?.id ?? goal!.userId,
+        'drop_date': DateTime.now().toIso8601String().split('T')[0],
+      };
+      if (user != null) {
+        body['onboarding_profile'] = user.onboardingProfile;
+      }
       await supa.Supabase.instance.client.functions.invoke(
         'generate-growth-drop',
-        body: {
-          'user_id': user.id,
-          'onboarding_profile': user.onboardingProfile,
-          'drop_date': DateTime.now().toIso8601String().split('T')[0],
-        },
+        body: body,
       );
       if (mounted) {
         ref.invalidate(growthDropProvider);

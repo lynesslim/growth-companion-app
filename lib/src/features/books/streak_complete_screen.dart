@@ -3,69 +3,106 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:confetti/confetti.dart';
 import '../../core/app_colors.dart';
 import '../../providers/user_provider.dart';
 import '../../providers/social_provider.dart';
+import '../../providers/growth_drop_provider.dart';
 import '../../domain/models/growth_drop.dart';
 
-class StreakCompleteScreen extends ConsumerWidget {
+class StreakCompleteScreen extends ConsumerStatefulWidget {
   final GrowthDrop? book;
 
   const StreakCompleteScreen({super.key, this.book});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<StreakCompleteScreen> createState() => _StreakCompleteScreenState();
+}
+
+class _StreakCompleteScreenState extends ConsumerState<StreakCompleteScreen> {
+  late ConfettiController _confettiController;
+  bool _isSaved = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _isSaved = widget.book?.isSaved ?? false;
+    _confettiController = ConfettiController(duration: const Duration(seconds: 3));
+    _confettiController.play();
+  }
+
+  @override
+  void dispose() {
+    _confettiController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final user = ref.watch(userProvider).valueOrNull;
     final streak = user?.currentStreak ?? 0;
+    final isSocialDrop = widget.book?.giftedBy != null;
 
     return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFF97316), Color(0xFFF59E0B)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      gradient: isSocialDrop
+                          ? const LinearGradient(
+                              colors: [AppColors.primary, AppColors.pinkLight],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            )
+                          : const LinearGradient(
+                              colors: [Color(0xFFF97316), Color(0xFFF59E0B)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                      borderRadius: BorderRadius.circular(28),
+                    ),
+                    child: Icon(
+                      isSocialDrop ? Icons.card_giftcard : Icons.local_fire_department_rounded,
+                      color: AppColors.white, size: 48),
                   ),
-                  borderRadius: BorderRadius.circular(28),
-                ),
-                child: const Icon(Icons.local_fire_department_rounded,
-                    color: AppColors.white, size: 48),
-              ),
-              const SizedBox(height: 32),
-              Text(
-                streak > 0 ? 'Day $streak' : 'Great start!',
-                style: GoogleFonts.playfairDisplay(
-                  fontSize: 36,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.grey900,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                streak > 1
-                    ? 'You\'re building an incredible habit.\nSee you tomorrow!'
-                    : 'First book down!\nYou\'re on your way to an amazing habit.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: AppColors.grey500,
-                  height: 1.6,
-                ),
-              ),
+                  const SizedBox(height: 32),
+                  Text(
+                    isSocialDrop
+                        ? 'Gift Unlocked!'
+                        : streak > 0 ? 'Day $streak' : 'Streak Started!',
+                    style: GoogleFonts.playfairDisplay(
+                      fontSize: 36,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.grey900,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    isSocialDrop
+                        ? 'You\'ve unpacked a blind box from your friend.'
+                        : 'You\'re building an incredible habit.\nSee you tomorrow!',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: AppColors.grey500,
+                      height: 1.6,
+                    ),
+                  ),
               const SizedBox(height: 48),
-              if (book != null) ...[
+              if (widget.book != null) ...[
                 SizedBox(
                   width: double.infinity,
                   child: GestureDetector(
-                    onTap: () => _showFriendPicker(context, ref, book!),
+                    onTap: () => _showFriendPicker(context, ref, widget.book!),
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 18),
                       decoration: BoxDecoration(
@@ -89,6 +126,43 @@ class StreakCompleteScreen extends ConsumerWidget {
                             ),
                           ],
                         ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                if (widget.book!.giftedBy != null) const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: GestureDetector(
+                    onTap: _isSaved ? null : () => _saveToJournal(context, widget.book!),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      decoration: BoxDecoration(
+                        color: _isSaved ? AppColors.grey200 : AppColors.primary.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: _isSaved ? Colors.transparent : AppColors.primary.withOpacity(0.2),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            _isSaved ? Icons.bookmark_added_rounded : Icons.bookmark_add_rounded,
+                            size: 18,
+                            color: _isSaved ? AppColors.grey500 : AppColors.primary,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            _isSaved ? 'Saved to Journal' : 'Save to my Journal',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: _isSaved ? AppColors.grey500 : AppColors.primary,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -126,7 +200,74 @@ class StreakCompleteScreen extends ConsumerWidget {
           ),
         ),
       ),
-    );
+      Align(
+        alignment: Alignment.topCenter,
+        child: ConfettiWidget(
+          confettiController: _confettiController,
+          blastDirectionality: BlastDirectionality.explosive,
+          shouldLoop: false,
+          colors: const [
+            AppColors.primary,
+            AppColors.pinkLight,
+            Color(0xFFF97316),
+            Color(0xFFF59E0B),
+            Colors.white,
+          ],
+          numberOfParticles: 20,
+          maxBlastForce: 20,
+          minBlastForce: 5,
+          gravity: 0.1,
+        ),
+      ),
+    ],
+  ),
+);
+}
+
+  Future<void> _saveToJournal(BuildContext context, GrowthDrop book) async {
+    if (book.giftedBy == null) {
+      // daily drop — just flip is_saved on the existing row
+      await ref.read(growthDropProvider.notifier).saveToJournal();
+      if (mounted) {
+        setState(() => _isSaved = true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Saved to your journal!')),
+        );
+      }
+      return;
+    }
+    // social drop — insert a new row
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
+    if (user == null) return;
+    try {
+      await supabase.from('growth_drops').insert({
+        'user_id': user.id,
+        'drop_date': DateTime.now().toIso8601String().split('T')[0],
+        'focus_area': book.focusArea,
+        'recommended_books': {
+          'bookTitle': book.bookTitle,
+          'bookAuthor': book.bookAuthor,
+          'whatItsAbout': book.whatItsAbout,
+          'lessons': book.lessons,
+          'summary': book.summary,
+        },
+        'is_read': true,
+        'is_saved': true,
+      });
+      if (mounted) {
+        setState(() => _isSaved = true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Saved to your journal!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not save: $e')),
+        );
+      }
+    }
   }
 
   void _inviteViaWhatsApp(BuildContext context, WidgetRef ref, GrowthDrop bookData) {

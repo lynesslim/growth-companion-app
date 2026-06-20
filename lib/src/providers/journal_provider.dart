@@ -9,6 +9,7 @@ final journalProvider = FutureProvider<List<GrowthDrop>>((ref) async {
   final data = await supa.Supabase.instance.client
       .from('growth_drops')
       .select()
+      .eq('is_saved', true)
       .eq('user_id', userId)
       .order('drop_date', ascending: false);
   return data.map((json) => fromSupabase(json)).toList();

@@ -142,19 +142,52 @@ class SocialNotifier extends AsyncNotifier<SocialState> {
     final user = _supabase.auth.currentUser;
     if (user == null) return;
     try {
-      await _supabase.from('social_drops').insert({
-        'sender_id': user.id,
-        'recipient_id': friendId,
-        'drop_date': DateTime.now().toIso8601String().split('T')[0],
-        'book_data': {},
-      });
-
       final today = DateTime.now().toIso8601String().split('T')[0];
-      final streakData = await _supabase
+
+      // 1. Client-side check
+      final existingDrop = await _supabase
+          .from('social_drops')
+          .select('id')
+          .eq('sender_id', user.id)
+          .eq('recipient_id', friendId)
+          .eq('drop_date', today)
+          .maybeSingle();
+
+      if (existingDrop != null) {
+        throw Exception('You already sent a drop to this friend today!');
+      }
+
+      // 2. Insert drop
+      try {
+        await _supabase.from('social_drops').insert({
+          'sender_id': user.id,
+          'recipient_id': friendId,
+          'drop_date': today,
+          'book_data': {},
+        });
+      } catch (e) {
+        // Catch DB unique constraint violation gracefully
+        if (e.toString().contains('23505') || e.toString().contains('unique_daily_drop')) {
+          throw Exception('You already sent a drop to this friend today!');
+        }
+        rethrow;
+      }
+
+      var streakData = await _supabase
           .from('social_streaks')
           .select()
-          .or('and(user_id_1.eq.${user.id},user_id_2.eq.$friendId),and(user_id_1.eq.$friendId,user_id_2.eq.${user.id})')
+          .eq('user_id_1', user.id)
+          .eq('user_id_2', friendId)
           .maybeSingle();
+
+      if (streakData == null) {
+        streakData = await _supabase
+            .from('social_streaks')
+            .select()
+            .eq('user_id_1', friendId)
+            .eq('user_id_2', user.id)
+            .maybeSingle();
+      }
 
       if (streakData != null) {
         final isUser1 = streakData['user_id_1'] == user.id;

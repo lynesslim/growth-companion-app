@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/app_colors.dart';
 import '../../../providers/user_provider.dart';
@@ -47,7 +48,9 @@ class HomeHeader extends ConsumerWidget {
         const SizedBox(width: 16),
         Column(
           children: [
-            Container(
+          GestureDetector(
+            onTap: () => context.go('/profile'),
+            child: Container(
               width: 48,
               height: 48,
               decoration: BoxDecoration(
@@ -69,6 +72,7 @@ class HomeHeader extends ConsumerWidget {
                 ),
               ),
             ),
+          ),
             const SizedBox(height: 8),
             _StreakBadge(days: streak),
           ],

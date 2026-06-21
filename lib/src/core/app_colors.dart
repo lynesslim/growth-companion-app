@@ -65,6 +65,14 @@ class AppColors {
   static const Color darkSurface = Color(0xFF2E2623);
   static const Color darkSurfaceVariant = Color(0xFF1E1816);
 
+  // Friends page specific
+  static const Color peachLight = Color(0xFFFF8E8B);
+  static const Color lavenderLight = Color(0xFF9B72CB);
+  static const Color purplePrimary = Color(0xFF7B61FF);
+  static const Color paleLavender = Color(0xFFF2E8FF);
+  static const Color paleOrange = Color(0xFFFFF0E5);
+  static const Color midGrey = Color(0xFF8A8A8E);
+
   // Surface
   static const Color surfaceLight = Color(0xFFFCF9F5);
   static const Color surfaceDark = Color(0xFF1A1816);

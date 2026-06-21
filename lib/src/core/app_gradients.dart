@@ -27,4 +27,29 @@ class AppGradients {
   static const socialDropYellow = [Color(0xFFFFF6D1), Color(0xFFFFE59E)];
   static const socialDropPeach = [Color(0xFFFFEDE6), Color(0xFFFFD1C2)];
   static const socialDropLavender = [Color(0xFFE8EAF6), Color(0xFFC5CAE9)];
+
+  // Friends page
+  static const friendsHeaderText = LinearGradient(
+    colors: [Color(0xFFFF8E8B), Color(0xFF9B72CB)],
+  );
+
+  static const avatarRing = LinearGradient(
+    colors: [Color(0xFFFFD700), Color(0xFFFF6B8A), Color(0xFFC084FC)],
+  );
+
+  static const highlightCardBg = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFFFF5F5), Color(0xFFFDF4FF), Color(0xFFF0EBFF)],
+  );
+
+  static const ctaButton = LinearGradient(
+    colors: [Color(0xFFA88BEB), Color(0xFF7B61FF)],
+  );
+
+  static const addFriendButton = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFB088FF), Color(0xFF8A4FFF)],
+  );
 }

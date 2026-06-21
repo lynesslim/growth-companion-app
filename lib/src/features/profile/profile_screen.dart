@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import '../../core/app_colors.dart';
+import '../../core/app_typography.dart';
 import '../../core/animated_widgets.dart';
 import '../../providers/user_provider.dart';
 import '../../providers/journal_provider.dart';
@@ -30,6 +31,7 @@ class ProfileScreen extends ConsumerWidget {
     final booksFinished = drops.length;
 
     return Scaffold(
+      backgroundColor: AppColors.scaffoldGrey,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
@@ -87,9 +89,8 @@ class ProfileScreen extends ConsumerWidget {
                     const SizedBox(height: 16),
                     Text(
                       user?.name ?? 'Explorer',
-                      style: GoogleFonts.playfairDisplay(
+                      style: AppTypography.h1Playfair.copyWith(
                         fontSize: 26,
-                        fontWeight: FontWeight.w700,
                         color: AppColors.grey900,
                       ),
                     ),
@@ -159,9 +160,8 @@ class ProfileScreen extends ConsumerWidget {
                 delayMs: 200,
                 child: Text(
                   'Achievements',
-                  style: GoogleFonts.playfairDisplay(
+                  style: AppTypography.h1Playfair.copyWith(
                     fontSize: 22,
-                    fontWeight: FontWeight.w700,
                     color: AppColors.grey900,
                   ),
                 ),

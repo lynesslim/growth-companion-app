@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/app_colors.dart';
 import '../../../core/app_gradients.dart';
 import '../../../core/app_typography.dart';
+import '../../../core/animated_widgets.dart';
 import '../../../domain/models/growth_drop.dart';
 import '../../../providers/social_provider.dart';
 
@@ -83,48 +84,54 @@ class _SocialDropsCardState extends ConsumerState<SocialDropsCard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'From your friends',
-              style: AppTypography.h2Inter.copyWith(color: AppColors.textPrimary),
-            ),
-            GestureDetector(
-              onTap: () => context.push('/social'),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.8),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                  child: Text(
-                    'See all \u203A',
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
+        EntranceFadeSlide(
+          delayMs: 500,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'From your friends',
+                style: AppTypography.h2Inter.copyWith(color: AppColors.textPrimary),
               ),
-            ),
-          ],
+              GestureDetector(
+                onTap: () => context.push('/social'),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.8),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                    child: Text(
+                      'See all \u203A',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                ),
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 16),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: drops.length,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            childAspectRatio: 1.25,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-          ),
-          itemBuilder: (_, i) => _FriendGiftCard(
-            drop: drops[i],
-            colorIndex: i % 4,
-            onTap: () => _openDrop(drops[i]),
+        EntranceFadeSlide(
+          delayMs: 600,
+          child: GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: drops.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              childAspectRatio: 1.25,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+            ),
+            itemBuilder: (_, i) => _FriendGiftCard(
+              drop: drops[i],
+              colorIndex: i % 4,
+              onTap: () => _openDrop(drops[i]),
+            ),
           ),
         ),
       ],
@@ -186,7 +193,7 @@ class _FriendGiftCardState extends State<_FriendGiftCard>
 
     final colors = gradients[widget.colorIndex];
     final isPurple = widget.colorIndex == 0 || widget.colorIndex == 3;
-    final giftAsset = isPurple ? 'assets/images/purple_gift.png' : 'assets/images/yellow_gift.png';
+    final giftAsset = isPurple ? 'assets/images/purple_gift.webp' : 'assets/images/yellow_gift.webp';
 
     return GestureDetector(
       onTapDown: _onTapDown,

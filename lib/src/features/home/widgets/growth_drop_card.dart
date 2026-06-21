@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' as supa;
 import '../../../core/app_colors.dart';
 import '../../../core/app_gradients.dart';
 import '../../../core/app_typography.dart';
+import '../../../core/animated_widgets.dart';
 import '../../../providers/growth_drop_provider.dart';
 import '../../../providers/user_provider.dart';
 import '../../../utils/haptic_utils.dart';
@@ -126,56 +127,67 @@ class _GrowthDropCardState extends ConsumerState<GrowthDropCard>
               ],
             ),
             padding: const EdgeInsets.all(24),
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                   // Left Content
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          "✦ TODAY'S GROWTH DROP",
-                          style: AppTypography.captionInter.copyWith(color: AppColors.orangeAccentLight),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          drop.valueOrNull?.bookTitle ?? 'Discovering your drop...',
-                          style: GoogleFonts.inter(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary,
-                            height: 1.15,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        if (drop.valueOrNull?.focusArea != null)
-                          Row(
+                        EntranceFadeSlide(
+                          delayMs: 300,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.76),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                    '🎯 ${drop.valueOrNull!.focusArea}',
-                                    style: AppTypography.captionInter.copyWith(color: AppColors.orangeAccentDark),
+                              Text(
+                                "✦ TODAY'S GROWTH DROP",
+                                style: AppTypography.captionInter.copyWith(color: AppColors.orangeAccentLight),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                drop.valueOrNull?.bookTitle ?? 'Discovering your drop...',
+                                style: GoogleFonts.inter(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textPrimary,
+                                  height: 1.15,
                                 ),
                               ),
+                              const SizedBox(height: 10),
+                              if (drop.valueOrNull?.focusArea != null)
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withValues(alpha: 0.76),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Text(
+                                        '🎯 ${drop.valueOrNull?.focusArea ?? ''}',
+                                        style: AppTypography.captionInter.copyWith(color: AppColors.orangeAccentDark),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                             ],
                           ),
-                        const Spacer(),
-                        _CtaButton(
-                          label: drop.valueOrNull?.isRead == true ? 'Review' : 'Start Reading',
-                          onTap: () {
-                            if (drop.valueOrNull != null) {
-                              context.push('/book');
-                            } else {
-                              _generateToday();
-                            }
-                          },
+                        ),
+                        const SizedBox(height: 24),
+                        EntranceFadeSlide(
+                          delayMs: 400,
+                          child: _CtaButton(
+                            label: drop.valueOrNull?.isRead == true ? 'Review' : 'Start Reading',
+                            onTap: () {
+                              if (drop.valueOrNull != null) {
+                                context.push('/book');
+                              } else {
+                                _generateToday();
+                              }
+                            },
+                          ),
                         ),
                       ],
                     ),
@@ -185,11 +197,13 @@ class _GrowthDropCardState extends ConsumerState<GrowthDropCard>
                   SizedBox(
                     width: 125,
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.start,
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         // Spark / Action Area
                         Column(
+                          mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             GestureDetector(
@@ -253,71 +267,74 @@ class _GrowthDropCardState extends ConsumerState<GrowthDropCard>
                             ],
                           ],
                         ),
+                        const SizedBox(height: 16),
                         // Larger Book Cover Style Card
-                        AnimatedBuilder(
-                          animation: _ctrl,
-                          builder: (_, child) => Transform.translate(
-                            offset: Offset(0, -4 * _ctrl.value),
-                            child: child,
-                          ),
-                          child: Container(
-                            width: 125,
-                            height: 180,
-                            decoration: BoxDecoration(
-                              gradient: AppGradients.cardBgGradient,
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.22),
-                                  blurRadius: 12,
-                                  offset: const Offset(4, 8),
-                                ),
-                              ],
+                        EntranceFadeSlide(
+                          delayMs: 400,
+                          child: AnimatedBuilder(
+                            animation: _ctrl,
+                            builder: (_, child) => Transform.translate(
+                              offset: Offset(0, -4 * _ctrl.value),
+                              child: child,
                             ),
-                            padding: const EdgeInsets.all(12),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  width: 24,
-                                  height: 24,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.12),
-                                    borderRadius: BorderRadius.circular(6),
+                            child: Container(
+                              width: 125,
+                              height: 180,
+                              decoration: BoxDecoration(
+                                gradient: AppGradients.cardBgGradient,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.22),
+                                    blurRadius: 12,
+                                    offset: const Offset(4, 8),
                                   ),
-                                  child: const Icon(Icons.menu_book_rounded, color: AppColors.goldAccent, size: 12),
-                                ),
-                                const Spacer(),
-                                Text(
-                                  drop.valueOrNull?.bookTitle ?? 'Your Drop',
-                                  maxLines: 4,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.playfairDisplay(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white,
-                                    height: 1.25,
+                                ],
+                              ),
+                              padding: const EdgeInsets.all(12),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    width: 24,
+                                    height: 24,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: const Icon(Icons.menu_book_rounded, color: AppColors.goldAccent, size: 12),
                                   ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  drop.valueOrNull?.bookAuthor ?? 'Growth Guide',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 9,
-                                    color: Colors.white70,
+                                  const Spacer(),
+                                  Text(
+                                    drop.valueOrNull?.bookTitle ?? 'Your Drop',
+                                    maxLines: 4,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.playfairDisplay(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                      height: 1.25,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    drop.valueOrNull?.bookAuthor ?? 'Growth Guide',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 9,
+                                      color: Colors.white70,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                ],
-              ),
+              ],
             ),
           ),
         ),

@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:share_plus/share_plus.dart';
 import '../../core/app_colors.dart';
+import '../../core/app_typography.dart';
 import '../../core/animated_widgets.dart';
 import '../../domain/models/friend.dart';
 import '../../domain/models/growth_drop.dart';
@@ -61,7 +62,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen> {
     final userStateAsync = ref.watch(userProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
+      backgroundColor: AppColors.scaffoldGrey,
       appBar: AppBar(
         title: const Text('Friends & Streaks', style: TextStyle(color: AppColors.grey900, fontWeight: FontWeight.bold)),
         backgroundColor: Colors.transparent,
@@ -272,7 +273,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen> {
             const SizedBox(height: 24),
             Text(
               'Unpacking your blind box...',
-              style: GoogleFonts.playfairDisplay(
+              style: AppTypography.h1Playfair.copyWith(
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
                 color: AppColors.grey900,

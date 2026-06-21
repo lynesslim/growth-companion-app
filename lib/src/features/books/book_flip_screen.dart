@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import '../../core/app_colors.dart';
+import '../../core/app_typography.dart';
 import '../../core/animated_widgets.dart';
 import '../../domain/models/growth_drop.dart';
 import '../../providers/growth_drop_provider.dart';
@@ -350,12 +351,11 @@ class _CoverPage extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             book.bookTitle,
-            style: GoogleFonts.playfairDisplay(
-              fontSize: 34,
-              fontWeight: FontWeight.w700,
-              color: AppColors.white,
-              height: 1.1,
-            ),
+          style: AppTypography.h1Playfair.copyWith(
+            fontSize: 34,
+            color: AppColors.white,
+            height: 1.1,
+          ),
           ),
           const SizedBox(height: 8),
           Text(
@@ -415,9 +415,8 @@ class _WhatItsAboutPage extends StatelessWidget {
           const SizedBox(height: 20),
           Text(
             'What this book is about',
-            style: GoogleFonts.playfairDisplay(
+            style: AppTypography.h1Playfair.copyWith(
               fontSize: 22,
-              fontWeight: FontWeight.w700,
               color: AppColors.grey900,
             ),
           ),
@@ -515,9 +514,8 @@ class _LessonPage extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             'Lesson $lessonNumber',
-            style: GoogleFonts.playfairDisplay(
+            style: AppTypography.h1Playfair.copyWith(
               fontSize: 20,
-              fontWeight: FontWeight.w700,
               color: AppColors.grey900,
             ),
           ),
@@ -587,9 +585,8 @@ class _FinalSummaryPage extends StatelessWidget {
           const SizedBox(height: 20),
           Text(
             'Key Takeaways',
-            style: GoogleFonts.playfairDisplay(
+            style: AppTypography.h1Playfair.copyWith(
               fontSize: 22,
-              fontWeight: FontWeight.w700,
               color: AppColors.grey900,
             ),
           ),

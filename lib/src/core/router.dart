@@ -14,6 +14,7 @@ import '../features/books/congrats_screen.dart';
 import '../features/books/streak_complete_screen.dart';
 import '../features/profile/settings_screen.dart';
 import '../features/social/friend_profile_screen.dart';
+import '../features/social/friends_screen.dart';
 import '../features/social/social_screen.dart';
 import '../features/onboarding/invite_landing_screen.dart';
 import '../providers/auth_provider.dart';
@@ -159,7 +160,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: '/social',
-                builder: (context, state) => const SocialScreen(),
+                builder: (context, state) => const FriendsScreen(),
               ),
             ],
           ),

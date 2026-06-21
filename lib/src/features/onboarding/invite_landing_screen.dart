@@ -53,7 +53,7 @@ class _InviteLandingScreenState extends State<InviteLandingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
+      backgroundColor: AppColors.scaffoldGrey,
       body: Stack(
         children: [
           SafeArea(

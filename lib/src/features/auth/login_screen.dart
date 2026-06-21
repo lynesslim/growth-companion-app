@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import '../../core/app_colors.dart';
+import '../../core/app_typography.dart';
 import '../../core/animated_widgets.dart';
 import '../../utils/haptic_utils.dart';
 import '../../providers/auth_provider.dart';
@@ -77,7 +78,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
+      backgroundColor: AppColors.scaffoldGrey,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -90,9 +91,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   child: Text(
                     'Growth\nCompanion',
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.playfairDisplay(
+                    style: AppTypography.h1Playfair.copyWith(
                       fontSize: 36,
-                      fontWeight: FontWeight.w700,
                       color: AppColors.grey900,
                       height: 1.1,
                     ),

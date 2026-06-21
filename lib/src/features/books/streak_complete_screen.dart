@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:share_plus/share_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:confetti/confetti.dart';
 import '../../core/app_colors.dart';
+import '../../core/app_typography.dart';
 import '../../providers/user_provider.dart';
 import '../../providers/social_provider.dart';
 import '../../providers/growth_drop_provider.dart';
@@ -79,9 +80,8 @@ class _StreakCompleteScreenState extends ConsumerState<StreakCompleteScreen> {
                     isSocialDrop
                         ? 'Gift Unlocked!'
                         : streak > 0 ? 'Day $streak' : 'Streak Started!',
-                    style: GoogleFonts.playfairDisplay(
+                    style: AppTypography.h1Playfair.copyWith(
                       fontSize: 36,
-                      fontWeight: FontWeight.w700,
                       color: AppColors.grey900,
                     ),
                   ),

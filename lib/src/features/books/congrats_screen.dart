@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:confetti/confetti.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import '../../core/app_colors.dart';
+import '../../core/app_typography.dart';
 import '../../utils/haptic_utils.dart';
 
 class CongratsScreen extends StatefulWidget {
@@ -92,9 +93,8 @@ class _CongratsScreenState extends State<CongratsScreen> {
                     const SizedBox(height: 32),
                     Text(
                       'Amazing!',
-                      style: GoogleFonts.playfairDisplay(
+                      style: AppTypography.h1Playfair.copyWith(
                         fontSize: 36,
-                        fontWeight: FontWeight.w700,
                         color: AppColors.grey900,
                         letterSpacing: -0.5,
                       ),

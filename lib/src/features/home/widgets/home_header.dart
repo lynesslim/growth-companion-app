@@ -44,7 +44,7 @@ class HomeHeader extends ConsumerWidget {
                       ),
                       const SizedBox(height: 4),
                       EntranceFadeSlide(
-                        delayMs: 45,
+                        delayMs: 100,
                         child: Text(
                           'Your growth',
                           style: GoogleFonts.inter(
@@ -127,7 +127,7 @@ class HomeHeader extends ConsumerWidget {
         ),
         const SizedBox(height: 24),
         EntranceFadeSlide(
-          delayMs: 135,
+          delayMs: 200,
           child: _StatsRow(streak: streak, xp: xp, level: level, booksCount: booksCount),
         ),
       ],
@@ -184,8 +184,6 @@ class _StatsRow extends StatelessWidget {
     final stats = [
       _StatData(icon: Icons.menu_book_rounded, value: '$booksCount', label: 'Books Read', iconColor: const Color(0xFF7C5CFF), bgColor: const Color(0xFFEEE8FF)),
       _StatData(icon: Icons.emoji_events_rounded, value: '$level', label: 'Level', iconColor: const Color(0xFFF6B91C), bgColor: const Color(0xFFFFF5D8)),
-      _StatData(icon: Icons.local_fire_department_rounded, value: '$streak', label: 'Streak Days', iconColor: const Color(0xFFEC4F8C), bgColor: const Color(0xFFFFE7F1)),
-      _StatData(icon: Icons.trending_up_rounded, value: '$xp', label: 'Growth Score', iconColor: const Color(0xFF48B96A), bgColor: const Color(0xFFE9F8ED)),
     ];
 
     return Row(
@@ -195,7 +193,7 @@ class _StatsRow extends StatelessWidget {
           child: Padding(
             padding: EdgeInsets.only(left: i == 0 ? 0 : 6, right: i == stats.length - 1 ? 0 : 6),
             child: Container(
-              height: 145,
+              height: 110,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.72),

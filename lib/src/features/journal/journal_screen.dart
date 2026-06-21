@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import '../../core/app_colors.dart';
+import '../../core/app_typography.dart';
 import '../../core/animated_widgets.dart';
 import '../../providers/journal_provider.dart';
 import '../../domain/models/growth_drop.dart';
@@ -15,6 +16,7 @@ class JournalScreen extends ConsumerWidget {
     final dropsAsync = ref.watch(journalProvider);
 
     return Scaffold(
+      backgroundColor: AppColors.scaffoldGrey,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -25,9 +27,8 @@ class JournalScreen extends ConsumerWidget {
                 padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
                 child: Text(
                   'Your Library',
-                  style: GoogleFonts.playfairDisplay(
+                  style: AppTypography.h1Playfair.copyWith(
                     fontSize: 28,
-                    fontWeight: FontWeight.w700,
                     color: AppColors.grey900,
                   ),
                 ),
@@ -59,7 +60,7 @@ class JournalScreen extends ConsumerWidget {
                           const SizedBox(height: 20),
                           Text(
                             'Your Library',
-                            style: GoogleFonts.playfairDisplay(
+                            style: AppTypography.h1Playfair.copyWith(
                               fontSize: 24,
                               fontWeight: FontWeight.w600,
                               color: AppColors.grey900,
@@ -155,9 +156,8 @@ class _BookCoverCard extends StatelessWidget {
               drop.bookTitle,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.playfairDisplay(
+              style: AppTypography.h1Playfair.copyWith(
                 fontSize: 16,
-                fontWeight: FontWeight.w700,
                 color: AppColors.white,
                 height: 1.2,
               ),

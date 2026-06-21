@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 import '../../core/app_colors.dart';
+import '../../core/app_typography.dart';
 import '../../core/animated_widgets.dart';
 import '../../domain/models/user.dart';
 import '../../providers/social_provider.dart';
@@ -146,7 +147,7 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
     }
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
+      backgroundColor: AppColors.scaffoldGrey,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -187,9 +188,8 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
               delayMs: 50,
               child: Text(
                 widget.profile.name,
-                style: GoogleFonts.playfairDisplay(
+                style: AppTypography.h1Playfair.copyWith(
                   fontSize: 28,
-                  fontWeight: FontWeight.w700,
                   color: AppColors.grey900,
                 ),
               ),
@@ -252,9 +252,8 @@ class _StatItem extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           value,
-          style: GoogleFonts.playfairDisplay(
+          style: AppTypography.h1Playfair.copyWith(
             fontSize: 20,
-            fontWeight: FontWeight.w700,
             color: AppColors.grey900,
           ),
         ),

@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -118,40 +119,88 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.scaffoldGrey,
-      body: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: SizedBox(height: topPadding + 32),
+      body: Stack(
+        children: [
+          CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: SizedBox(height: topPadding + 32),
+              ),
+              SliverToBoxAdapter(
+                child: EntranceFadeSlide(
+                  delayMs: 0,
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20),
+                    child: HomeHeader(),
+                  ),
+                ),
+              ),
+              const SliverToBoxAdapter(
+                child: EntranceFadeSlide(
+                  delayMs: 200,
+                  child: Padding(
+                    padding: EdgeInsets.only(top: 24),
+                    child: GrowthDropCard(),
+                  ),
+                ),
+              ),
+              const SliverToBoxAdapter(
+                child: EntranceFadeSlide(
+                  delayMs: 400,
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(20, 24, 20, 0),
+                    child: SocialDropsCard(),
+                  ),
+                ),
+              ),
+              // Extra padding for bottom navigation
+              const SliverToBoxAdapter(child: SizedBox(height: 120)),
+            ],
           ),
-          SliverToBoxAdapter(
-            child: EntranceFadeSlide(
-              delayMs: 100,
-              child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
-                child: HomeHeader(),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: topPadding + 60,
+            child: IgnorePointer(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      AppColors.scaffoldGrey,
+                      AppColors.scaffoldGrey.withValues(alpha: 0.9),
+                      AppColors.scaffoldGrey.withValues(alpha: 0.0),
+                    ],
+                    stops: const [0.0, 0.5, 1.0],
+                  ),
+                ),
               ),
             ),
           ),
-          const SliverToBoxAdapter(
-            child: EntranceFadeSlide(
-              delayMs: 180,
-              child: Padding(
-                padding: EdgeInsets.only(top: 24),
-                child: GrowthDropCard(),
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 100, // Short enough to just cover behind the nav bar
+            child: IgnorePointer(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [
+                      AppColors.scaffoldGrey.withValues(alpha: 0.8),
+                      AppColors.scaffoldGrey.withValues(alpha: 0.5),
+                      AppColors.scaffoldGrey.withValues(alpha: 0.0),
+                    ],
+                    stops: const [0.0, 0.5, 1.0],
+                  ),
+                ),
               ),
             ),
           ),
-          const SliverToBoxAdapter(
-            child: EntranceFadeSlide(
-              delayMs: 230,
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(20, 24, 20, 0),
-                child: SocialDropsCard(),
-              ),
-            ),
-          ),
-          // Extra padding for bottom navigation
-          const SliverToBoxAdapter(child: SizedBox(height: 120)),
         ],
       ),
     );

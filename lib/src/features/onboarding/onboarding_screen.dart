@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import '../../core/app_colors.dart';
+import '../../core/app_typography.dart';
 import '../../providers/user_provider.dart';
 import '../../utils/haptic_utils.dart';
 import 'widgets/onboarding_widgets.dart';
@@ -262,9 +263,8 @@ class _WelcomeScreen extends StatelessWidget {
           Text(
             'Your Daily\nGrowth Companion',
             textAlign: TextAlign.center,
-            style: GoogleFonts.playfairDisplay(
+            style: AppTypography.h1Playfair.copyWith(
               fontSize: 34,
-              fontWeight: FontWeight.w700,
               color: AppColors.grey900,
               height: 1.15,
             ),
@@ -354,9 +354,8 @@ class _NameScreenState extends State<_NameScreen> {
           const SizedBox(height: 48),
           Text(
             "What's your name?",
-            style: GoogleFonts.playfairDisplay(
+            style: AppTypography.h1Playfair.copyWith(
               fontSize: 28,
-              fontWeight: FontWeight.w700,
               color: AppColors.grey900,
             ),
           ),
@@ -424,8 +423,8 @@ class _QuestionScreen extends StatelessWidget {
         children: [
           const SizedBox(height: 48),
           Text(title,
-              style: GoogleFonts.playfairDisplay(
-                  fontSize: 28, fontWeight: FontWeight.w700, color: AppColors.grey900)),
+              style: AppTypography.h1Playfair.copyWith(
+                  fontSize: 28, color: AppColors.grey900)),
           const SizedBox(height: 8),
           Text(subtitle,
               style: const TextStyle(fontSize: 15, color: AppColors.grey500)),
@@ -487,8 +486,8 @@ class _TopicScreen extends StatelessWidget {
         children: [
           const SizedBox(height: 48),
           Text(title,
-              style: GoogleFonts.playfairDisplay(
-                  fontSize: 28, fontWeight: FontWeight.w700, color: AppColors.grey900)),
+              style: AppTypography.h1Playfair.copyWith(
+                  fontSize: 28, color: AppColors.grey900)),
           const SizedBox(height: 8),
           Text(subtitle,
               style: const TextStyle(fontSize: 15, color: AppColors.grey500)),
@@ -540,8 +539,8 @@ class _MotivationScreen extends StatelessWidget {
         children: [
           const SizedBox(height: 48),
           Text('What drives you?',
-              style: GoogleFonts.playfairDisplay(
-                  fontSize: 28, fontWeight: FontWeight.w700, color: AppColors.grey900)),
+              style: AppTypography.h1Playfair.copyWith(
+                  fontSize: 28, color: AppColors.grey900)),
           const SizedBox(height: 8),
           const Text('React to each statement',
               style: TextStyle(fontSize: 15, color: AppColors.grey500)),
@@ -587,8 +586,8 @@ class _RemindersScreen extends StatelessWidget {
         children: [
           const SizedBox(height: 48),
           Text('Daily Reminders',
-              style: GoogleFonts.playfairDisplay(
-                  fontSize: 28, fontWeight: FontWeight.w700, color: AppColors.grey900)),
+              style: AppTypography.h1Playfair.copyWith(
+                  fontSize: 28, color: AppColors.grey900)),
           const SizedBox(height: 8),
           const Text('Get a gentle nudge to read every day',
               style: TextStyle(fontSize: 15, color: AppColors.grey500)),
@@ -681,9 +680,8 @@ class _LoadingScreen extends StatelessWidget {
             Text(
               'Crafting Your\nGrowth Path',
               textAlign: TextAlign.center,
-              style: GoogleFonts.playfairDisplay(
+              style: AppTypography.h1Playfair.copyWith(
                 fontSize: 28,
-                fontWeight: FontWeight.w700,
                 color: AppColors.grey900,
                 height: 1.2,
               ),
@@ -736,9 +734,8 @@ class _PlanScreen extends StatelessWidget {
           const SizedBox(height: 24),
           Text(
             "You're all set!",
-            style: GoogleFonts.playfairDisplay(
+            style: AppTypography.h1Playfair.copyWith(
               fontSize: 30,
-              fontWeight: FontWeight.w700,
               color: AppColors.grey900,
             ),
           ),
@@ -815,9 +812,8 @@ class _FirstSessionScreen extends StatelessWidget {
           const SizedBox(height: 32),
           Text(
             'Your First Session',
-            style: GoogleFonts.playfairDisplay(
+            style: AppTypography.h1Playfair.copyWith(
               fontSize: 30,
-              fontWeight: FontWeight.w700,
               color: AppColors.grey900,
             ),
           ),

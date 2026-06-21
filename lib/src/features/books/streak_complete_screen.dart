@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
+import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:confetti/confetti.dart';
@@ -273,7 +273,16 @@ class _StreakCompleteScreenState extends ConsumerState<StreakCompleteScreen> {
   void _inviteViaWhatsApp(BuildContext context, WidgetRef ref, GrowthDrop bookData) {
     final userId = ref.read(userProvider).valueOrNull?.id;
     final inviteLink = userId != null ? ' Join me here: ${Uri.base.origin}/#/invite?sender=$userId&drop_id=${bookData.id}' : '';
-    Share.share('I just read "${bookData.bookTitle}" by ${bookData.bookAuthor} and it was amazing! Try the app and let\'s share books daily.$inviteLink');
+    final shareText = 'I just read "${bookData.bookTitle}" by ${bookData.bookAuthor} and it was amazing! Try the app and let\'s share books daily.$inviteLink';
+    
+    try {
+      Share.share(shareText);
+    } catch (_) {}
+    
+    Clipboard.setData(ClipboardData(text: shareText));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Share link copied to clipboard!')),
+    );
   }
 
   void _showFriendPicker(BuildContext context, WidgetRef ref, GrowthDrop bookData) {

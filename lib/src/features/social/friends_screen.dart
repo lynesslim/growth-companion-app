@@ -136,7 +136,16 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
     if (userId == null) return;
     HapticFeedback.lightImpact();
     final inviteLink = '${Uri.base.origin}/#/invite?sender=$userId';
-    final shareText = 'I\'ve been using this amazing app to build my reading habit and share books daily. Try it out and let\'s start a reading streak together! Join me here: $inviteLink';
+    
+    final journalState = ref.read(journalProvider).valueOrNull;
+    String shareText;
+    
+    if (journalState != null && journalState.isNotEmpty) {
+      final latestBook = journalState.first;
+      shareText = 'I just read "${latestBook.bookTitle}" by ${latestBook.bookAuthor} and it was amazing! Try the app and let\'s share books daily. Join me here: $inviteLink';
+    } else {
+      shareText = 'I\'ve been using this amazing app to build my reading habit and share books daily. Try it out and let\'s start a reading streak together! Join me here: $inviteLink';
+    }
     
     try {
       Share.share(shareText);
@@ -438,6 +447,8 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
   Widget build(BuildContext context) {
     final socialStateAsync = ref.watch(socialProvider);
     final userStateAsync = ref.watch(userProvider);
+    // Watch journalProvider so it loads data proactively
+    ref.watch(journalProvider);
 
     return Scaffold(
       backgroundColor: AppColors.scaffoldGrey,

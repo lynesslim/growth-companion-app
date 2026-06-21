@@ -13,6 +13,7 @@ import '../../domain/models/social_streak.dart';
 import '../../providers/social_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../providers/journal_provider.dart';
+import '../../domain/models/growth_drop.dart';
 
 final List<Color> _avatarColors = [
   const Color(0xFF9E82F0),
@@ -155,6 +156,61 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Invite link copied to clipboard!')),
     );
+  }
+
+  Future<void> _openDrop(dynamic drop) async {
+    if (drop.bookData != null) {
+      ref.read(socialProvider.notifier).markDropOpened(drop.id);
+      if (context.mounted) context.push('/book', extra: drop.bookData);
+      return;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        contentPadding: const EdgeInsets.all(32),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('📦', style: TextStyle(fontSize: 48, fontFamily: 'Apple Color Emoji')),
+            const SizedBox(height: 24),
+            const CircularProgressIndicator(color: AppColors.primary),
+            const SizedBox(height: 24),
+            Text('Unpacking drop from ${drop.senderProfile?.name ?? 'a friend'}...',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final bookData = await ref.read(socialProvider.notifier).openBlindBox(drop.id);
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+
+        final parsedLessons = (bookData['lessons'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [];
+
+        context.push('/book', extra: GrowthDrop.fromJson({
+          'id': drop.id,
+          'date': drop.dropDate.toIso8601String(),
+          'focusArea': 'Social Drop',
+          'bookTitle': bookData['bookTitle'] ?? '',
+          'bookAuthor': bookData['bookAuthor'] ?? '',
+          'whatItsAbout': bookData['whatItsAbout'] ?? '',
+          'lessons': parsedLessons,
+          'summary': bookData['summary'] ?? '',
+          'isRead': true,
+          'giftedBy': drop.senderProfile?.name,
+        }));
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+    }
   }
 
   Widget _buildSearchResult(dynamic user, String? currentUserId) {
@@ -488,6 +544,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
             onSearchChanged: _onSearchChanged,
             onShareInvite: () => _shareInvite(userId),
             onSendDrop: _showSendDialog,
+            onOpenDrop: _openDrop,
             searchResultWidgets: searchResultWidgets,
             pendingRequestWidgets: pendingRequestWidgets,
           );
@@ -507,6 +564,7 @@ class _FriendsBody extends StatelessWidget {
   final ValueChanged<String> onSearchChanged;
   final VoidCallback onShareInvite;
   final void Function(Friend) onSendDrop;
+  final void Function(dynamic drop) onOpenDrop;
   final List<Widget> searchResultWidgets;
   final List<Widget> pendingRequestWidgets;
 
@@ -518,6 +576,7 @@ class _FriendsBody extends StatelessWidget {
     required this.onSearchChanged,
     required this.onShareInvite,
     required this.onSendDrop,
+    required this.onOpenDrop,
     required this.searchResultWidgets,
     required this.pendingRequestWidgets,
   });
@@ -680,6 +739,7 @@ class _FriendsBody extends StatelessWidget {
                     context.push('/friend-profile', extra: f.profile);
                   }
                 },
+                onOpenDrop: onOpenDrop,
               ),
             ),
             const SizedBox(height: 24),
@@ -706,6 +766,7 @@ class _FriendsBody extends StatelessWidget {
                   }
                 },
                 onSendDrop: onSendDrop,
+                onOpenDrop: onOpenDrop,
               ),
             ),
           ],
@@ -719,11 +780,13 @@ class _ClosestStreaksSection extends StatelessWidget {
   final String? userId;
   final SocialState socialState;
   final void Function(Friend friend) onFriendTap;
+  final void Function(dynamic drop)? onOpenDrop;
 
   const _ClosestStreaksSection({
     required this.userId,
     required this.socialState,
     required this.onFriendTap,
+    this.onOpenDrop,
   });
 
   int _streakForFriend(Friend f) {
@@ -767,12 +830,18 @@ class _ClosestStreaksSection extends StatelessWidget {
               final fid = userId != null
                   ? (f.userId1 == userId ? f.userId2 : f.userId1)
                   : '';
-              final unopenedCount = socialState.receivedDrops.where((d) => d.senderId == fid && !d.isOpened).length;
+              final unopenedDrops = socialState.receivedDrops.where((d) => d.senderId == fid && !d.isOpened).toList();
               return _StreakAvatarItem(
                 name: friendName, 
                 streak: streak,
-                onTap: () => onFriendTap(f),
-                unopenedCount: unopenedCount,
+                onTap: () {
+                  if (unopenedDrops.isNotEmpty && onOpenDrop != null) {
+                    onOpenDrop!(unopenedDrops.first);
+                  } else {
+                    onFriendTap(f);
+                  }
+                },
+                unopenedCount: unopenedDrops.length,
               );
             },
           ),
@@ -989,12 +1058,14 @@ class _AllFriendsSection extends StatelessWidget {
   final SocialState socialState;
   final void Function(Friend friend) onFriendTap;
   final void Function(Friend friend) onSendDrop;
+  final void Function(dynamic drop)? onOpenDrop;
 
   const _AllFriendsSection({
     required this.userId,
     required this.socialState,
     required this.onFriendTap,
     required this.onSendDrop,
+    this.onOpenDrop,
   });
 
   int _streakForFriend(Friend f) {
@@ -1092,15 +1163,21 @@ class _AllFriendsSection extends StatelessWidget {
                     ? (f.userId1 == userId ? f.userId2 : f.userId1)
                     : '';
                 final alreadySent = socialState.sentTodayFriendIds.contains(fid);
-                final unopenedCount = socialState.receivedDrops.where((d) => d.senderId == fid && !d.isOpened).length;
+                final unopenedDrops = socialState.receivedDrops.where((d) => d.senderId == fid && !d.isOpened).toList();
                 return _FriendTile(
                   name: friendName,
                   streak: streak,
                   hasStreak: streak > 0,
-                  onTap: () => onFriendTap(f),
+                  onTap: () {
+                    if (unopenedDrops.isNotEmpty && onOpenDrop != null) {
+                      onOpenDrop!(unopenedDrops.first);
+                    } else {
+                      onFriendTap(f);
+                    }
+                  },
                   onSendDrop: () => onSendDrop(f),
                   alreadySent: alreadySent,
-                  unopenedCount: unopenedCount,
+                  unopenedCount: unopenedDrops.length,
                 );
               },
             ),
@@ -1132,13 +1209,14 @@ class _FriendTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: onTap,
-            child: Stack(
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Stack(
               clipBehavior: Clip.none,
               children: [
                 _buildAvatar(48, name),
@@ -1173,7 +1251,6 @@ class _FriendTile extends StatelessWidget {
                   ),
               ],
             ),
-          ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
@@ -1190,7 +1267,7 @@ class _FriendTile extends StatelessWidget {
                 ),
                 Text(
                   hasStreak ? 'Active today' : 'Send a drop to start!',
-                  style: AppTypography.bodyInter.copyWith(fontSize: 13, color: AppColors.midGrey),
+                  style: AppTypography.bodyInter.copyWith(fontSize: 13, color: AppColors.grey500),
                 ),
               ],
             ),
@@ -1231,6 +1308,7 @@ class _FriendTile extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }

@@ -14,99 +14,7 @@ import '../../providers/social_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../providers/journal_provider.dart';
 import '../../domain/models/growth_drop.dart';
-
-final List<Color> _avatarColors = [
-  const Color(0xFF9E82F0),
-  const Color(0xFFF0A8D2),
-  const Color(0xFFE882B8),
-  const Color(0xFFE75B1B),
-  const Color(0xFF6366F1),
-  const Color(0xFF14B8A6),
-  const Color(0xFFEC4899),
-  const Color(0xFF8B5CF6),
-];
-
-Color _avatarColor(String name) => _avatarColors[name.hashCode % _avatarColors.length];
-
-String _initials(String name) {
-  final parts = name.trim().split(RegExp(r'\s+'));
-  if (parts.length >= 2) return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
-  if (parts.length == 1 && parts.first.isNotEmpty) return parts.first[0].toUpperCase();
-  return '?';
-}
-
-Widget _buildAvatar(double size, String name) {
-  return Container(
-    width: size,
-    height: size,
-    decoration: BoxDecoration(
-      color: _avatarColor(name),
-      shape: BoxShape.circle,
-    ),
-    child: Center(
-      child: Text(
-        _initials(name),
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: size * 0.38,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    ),
-  );
-}
-
-Widget _buildGradientAvatarRing(double size, String name, {double borderWidth = 3}) {
-  return Container(
-    width: size + borderWidth * 2 + 4,
-    height: size + borderWidth * 2 + 4,
-    decoration: BoxDecoration(
-      shape: BoxShape.circle,
-      gradient: AppGradients.avatarRing,
-    ),
-    padding: const EdgeInsets.all(3),
-    child: Container(
-      decoration: const BoxDecoration(
-        color: AppColors.white,
-        shape: BoxShape.circle,
-      ),
-      padding: const EdgeInsets.all(2),
-      child: _buildAvatar(size, name),
-    ),
-  );
-}
-
-Widget _streakBadge(int count) {
-  return Container(
-    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-    decoration: BoxDecoration(
-      color: AppColors.white,
-      borderRadius: BorderRadius.circular(12),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withValues(alpha: 0.08),
-          blurRadius: 4,
-          offset: const Offset(0, 2),
-        ),
-      ],
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Text('🔥', style: TextStyle(fontSize: 11, fontFamily: 'Apple Color Emoji')),
-        const SizedBox(width: 2),
-        Text(
-          '$count',
-          style: const TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.bold,
-            color: AppColors.black,
-          ),
-        ),
-      ],
-    ),
-  );
-}
+import '../../shared/widgets/avatar_ring.dart';
 
 class FriendsScreen extends ConsumerStatefulWidget {
   const FriendsScreen({super.key});
@@ -870,13 +778,13 @@ class _StreakAvatarItem extends StatelessWidget {
             Stack(
               clipBehavior: Clip.none,
               children: [
-                _buildGradientAvatarRing(52, name),
+                AvatarRing(size: 52, name: name),
                 if (streak > 0)
                   Positioned(
                     bottom: -6,
                     left: -10,
                     right: -10,
-                    child: Center(child: _streakBadge(streak)),
+                    child: Center(child: StreakBadge(count: streak)),
                   ),
                 if (unopenedCount > 0)
                   Positioned(
@@ -951,12 +859,12 @@ class _HighlightCard extends StatelessWidget {
                           Positioned(
                             left: 0,
                             top: 4,
-                            child: _buildAvatar(36, currentUserName),
+                            child: AvatarCircle(size: 36, name: currentUserName),
                           ),
                           Positioned(
                             left: 20,
                             top: 0,
-                            child: _buildGradientAvatarRing(40, friendName, borderWidth: 2.5),
+                            child: AvatarRing(size: 40, name: friendName, borderWidth: 2.5),
                           ),
                           if (streakCount > 0)
                             Positioned(
@@ -964,7 +872,7 @@ class _HighlightCard extends StatelessWidget {
                               bottom: -4,
                               child: Transform.scale(
                                 scale: 0.8,
-                                child: _streakBadge(streakCount),
+                                child: StreakBadge(count: streakCount),
                               ),
                             ),
                         ],
@@ -1219,7 +1127,7 @@ class _FriendTile extends StatelessWidget {
             Stack(
               clipBehavior: Clip.none,
               children: [
-                _buildAvatar(48, name),
+                AvatarCircle(size: 48, name: name),
                 if (hasStreak)
                   Positioned(
                     bottom: -2,

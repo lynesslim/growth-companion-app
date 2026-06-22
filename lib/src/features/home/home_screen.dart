@@ -11,6 +11,9 @@ import '../../core/animated_widgets.dart';
 import '../../providers/growth_drop_provider.dart';
 import '../../providers/social_provider.dart';
 import '../../providers/user_provider.dart';
+import '../../shared/widgets/avatar_ring.dart';
+import '../../domain/models/friend.dart';
+import '../../domain/models/social_streak.dart';
 import 'widgets/home_header.dart';
 import 'widgets/growth_drop_card.dart';
 import 'widgets/social_drops_card.dart';
@@ -144,6 +147,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                 ),
               ),
+              // ponytail: hide if no friends; matches friends screen closest streaks design
+              if (socialState.valueOrNull?.acceptedFriends.isNotEmpty == true)
+                SliverToBoxAdapter(
+                  child: EntranceFadeSlide(
+                    delayMs: 300,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 24, 0, 0),
+                      child: _SendToFriendsCarousel(
+                        userId: ref.watch(userProvider).valueOrNull?.id ?? '',
+                        friends: socialState.valueOrNull!.acceptedFriends,
+                        streaks: socialState.valueOrNull!.streaks,
+                        onTap: () => context.push('/social'),
+                      ),
+                    ),
+                  ),
+                ),
               const SliverToBoxAdapter(
                 child: EntranceFadeSlide(
                   delayMs: 400,
@@ -346,12 +365,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         Navigator.pop(context); // close loading modal
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to generate: $e')),
-        );
-      }
+      );
+    }
     }
   }
+}
 
-  void _showDropModal(BuildContext context) {
+// ponytail: standalone function since it doesn't reference state; avoids extra nesting
+void _showDropModal(BuildContext context) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -431,6 +452,103 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ],
         ),
       ),
+    );
+  }
+
+class _SendToFriendsCarousel extends StatelessWidget {
+  final String userId;
+  final List<Friend> friends;
+  final List<SocialStreak> streaks;
+  final VoidCallback onTap;
+
+  const _SendToFriendsCarousel({
+    required this.userId,
+    required this.friends,
+    required this.streaks,
+    required this.onTap,
+  });
+
+  int _streakForFriend(Friend f) {
+    final fid = f.userId1 == userId ? f.userId2 : f.userId1;
+    final s = streaks.firstWhere(
+      (s) => (s.userId1 == userId && s.userId2 == fid) || (s.userId1 == fid && s.userId2 == userId),
+      orElse: () => SocialStreak(id: '', userId1: userId, userId2: fid, currentStreak: 0),
+    );
+    return s.currentStreak;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final sorted = List<Friend>.from(friends)
+      ..sort((a, b) => _streakForFriend(b).compareTo(_streakForFriend(a)));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(right: 20),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Send a book to your friends',
+                style: AppTypography.h2Inter.copyWith(color: AppColors.textPrimary),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          height: 100,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: sorted.length,
+            itemBuilder: (_, i) {
+              final f = sorted[i];
+              final name = f.profile?.name ?? 'Friend';
+              final streak = _streakForFriend(f);
+              return Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: GestureDetector(
+                  onTap: onTap,
+                  child: SizedBox(
+                    width: 72,
+                    child: Column(
+                      children: [
+                        Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            AvatarRing(size: 52, name: name),
+                            if (streak > 0)
+                              Positioned(
+                                bottom: -6,
+                                left: -10,
+                                right: -10,
+                                child: Center(child: StreakBadge(count: streak)),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          name.split(' ').first,
+                          style: AppTypography.bodyInter.copyWith(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.black,
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

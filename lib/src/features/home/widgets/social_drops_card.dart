@@ -117,20 +117,22 @@ class _SocialDropsCardState extends ConsumerState<SocialDropsCard> {
         const SizedBox(height: 16),
         EntranceFadeSlide(
           delayMs: 600,
-          child: GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: drops.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              childAspectRatio: 1.25,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-            ),
-            itemBuilder: (_, i) => _FriendGiftCard(
-              drop: drops[i],
-              colorIndex: i % 4,
-              onTap: () => _openDrop(drops[i]),
+          child: SizedBox(
+            height: 200,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: drops.length,
+              itemBuilder: (_, i) => Padding(
+                padding: EdgeInsets.only(right: 12),
+                child: SizedBox(
+                  width: 220,
+                  child: _FriendGiftCard(
+                    drop: drops[i],
+                    colorIndex: i % 4,
+                    onTap: () => _openDrop(drops[i]),
+                  ),
+                ),
+              ),
             ),
           ),
         ),

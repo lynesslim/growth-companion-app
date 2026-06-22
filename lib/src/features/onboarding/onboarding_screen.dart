@@ -75,7 +75,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     final currentUser = ref.read(userProvider).valueOrNull;
     if (currentUser != null) {
       final updated = currentUser.copyWith(
-        name: _name.trim().isNotEmpty ? _name.trim() : currentUser.name,
+        name: _name.trim().length >= 2 ? _name.trim() : currentUser.name,
         onboardingProfile: answersMap
       );
       await ref.read(userProvider.notifier).saveOnboardingData(updated);
@@ -111,7 +111,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
         return _NameScreen(
           value: _name,
           onChanged: (v) => setState(() => _name = v),
-          onNext: _name.trim().isNotEmpty ? _next : null,
+          onNext: _name.trim().length >= 2 ? _next : null,
         );
       case 2:
         return _QuestionScreen(
@@ -331,6 +331,7 @@ class _NameScreen extends StatefulWidget {
 
 class _NameScreenState extends State<_NameScreen> {
   late TextEditingController _controller;
+  bool _isDirty = false;
 
   @override
   void initState() {
@@ -343,6 +344,8 @@ class _NameScreenState extends State<_NameScreen> {
     _controller.dispose();
     super.dispose();
   }
+
+  bool get _hasError => _isDirty && _controller.text.trim().length < 2;
 
   @override
   Widget build(BuildContext context) {
@@ -368,7 +371,10 @@ class _NameScreenState extends State<_NameScreen> {
           TextField(
             controller: _controller,
             autofocus: true,
-            onChanged: widget.onChanged,
+            onChanged: (v) {
+              if (!_isDirty) setState(() => _isDirty = true);
+              widget.onChanged(v);
+            },
             decoration: InputDecoration(
               hintText: 'Enter your name',
               filled: true,
@@ -380,6 +386,14 @@ class _NameScreenState extends State<_NameScreen> {
             ),
             style: const TextStyle(fontSize: 16, color: AppColors.grey900),
           ),
+          if (_hasError)
+            const Padding(
+              padding: EdgeInsets.only(top: 8, left: 4),
+              child: Text(
+                'Name must be at least 2 characters',
+                style: TextStyle(fontSize: 13, color: AppColors.error),
+              ),
+            ),
           const Spacer(),
           _ContinueButton(onTap: widget.onNext),
         ],

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -23,6 +24,8 @@ class _GrowthDropCardState extends ConsumerState<GrowthDropCard>
   late AnimationController _ctrl;
   late Animation<double> _scaleAnim;
   bool _generating = false;
+  Timer? _countdownTimer;
+  Duration _remaining = Duration.zero;
 
   @override
   void initState() {
@@ -31,10 +34,23 @@ class _GrowthDropCardState extends ConsumerState<GrowthDropCard>
     _scaleAnim = Tween(begin: 1.0, end: 0.985).animate(
       CurvedAnimation(parent: _ctrl, curve: Curves.easeOut),
     );
+    _startCountdown();
+  }
+
+  void _startCountdown() {
+    _updateRemaining();
+    _countdownTimer = Timer.periodic(const Duration(seconds: 60), (_) => _updateRemaining());
+  }
+
+  void _updateRemaining() {
+    final now = DateTime.now();
+    final midnight = DateTime(now.year, now.month, now.day + 1);
+    setState(() => _remaining = midnight.difference(now));
   }
 
   @override
   void dispose() {
+    _countdownTimer?.cancel();
     _ctrl.dispose();
     super.dispose();
   }
@@ -178,15 +194,32 @@ class _GrowthDropCardState extends ConsumerState<GrowthDropCard>
                         const SizedBox(height: 24),
                         EntranceFadeSlide(
                           delayMs: 400,
-                          child: _CtaButton(
-                            label: drop.valueOrNull?.isRead == true ? 'Review' : 'Start Reading',
-                            onTap: () {
-                              if (drop.valueOrNull != null) {
-                                context.push('/book');
-                              } else {
-                                _generateToday();
-                              }
-                            },
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _CtaButton(
+                                label: drop.valueOrNull?.isRead == true ? 'Review' : 'Start Reading',
+                                onTap: () {
+                                  if (drop.valueOrNull != null) {
+                                    context.push('/book');
+                                  } else {
+                                    _generateToday();
+                                  }
+                                },
+                              ),
+                              if (drop.valueOrNull?.isRead == true && _remaining.inSeconds > 0)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 10),
+                                  child: Text(
+                                    'Your next book is available in ${_remaining.inHours}h ${_remaining.inMinutes % 60}min',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
                       ],

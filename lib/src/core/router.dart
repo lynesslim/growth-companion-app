@@ -15,8 +15,8 @@ import '../features/books/streak_complete_screen.dart';
 import '../features/profile/settings_screen.dart';
 import '../features/social/friend_profile_screen.dart';
 import '../features/social/friends_screen.dart';
-import '../features/social/social_screen.dart';
 import '../features/onboarding/invite_landing_screen.dart';
+import '../features/onboarding/pre_onboarding_screen.dart';
 import '../providers/auth_provider.dart';
 import '../providers/user_provider.dart';
 
@@ -49,7 +49,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       final isAuthenticated = authState.valueOrNull != null;
       final isLoginRoute = state.matchedLocation == '/login';
       
-      if (!isAuthenticated && !isLoginRoute && state.matchedLocation != '/invite') return '/login';
+      if (!isAuthenticated && !isLoginRoute && state.matchedLocation != '/invite' && state.matchedLocation != '/pre-onboarding') {
+        if (!PreOnboardingState.hasSeen) return '/pre-onboarding';
+        return '/login';
+      }
       
       if (isAuthenticated) {
         final user = userState.valueOrNull;
@@ -68,6 +71,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
 
         final strictOnboardingRoutes = [
           '/onboarding',
+          '/pre-onboarding',
         ];
         
         if (!needsOnboarding && strictOnboardingRoutes.contains(state.matchedLocation)) {
@@ -85,6 +89,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+      GoRoute(
+        path: '/pre-onboarding',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const PreOnboardingScreen(),
+      ),
       GoRoute(
         path: '/login',
         parentNavigatorKey: _rootNavigatorKey,

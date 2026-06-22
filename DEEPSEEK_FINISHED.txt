@@ -1,0 +1,27 @@
+# Deepseek Implementation Plan - Phase 2
+
+**QA REJECTION (PLEASE FIX):**
+Your last commit broke the build. `flutter analyze` threw multiple fatal errors. Please fix these immediately:
+
+1. `home_screen.dart`: You have syntax errors (missing commas), and multiple `read_potentially_unassigned_final` errors for `userId`, `streaks`, `friends`, and `onTap`. You also defined a `build` method incorrectly or left an unused one.
+2. `growth_drop_card.dart`: `Duration` does not have an `isPositive` getter. Use `!isNegative` or `inSeconds > 0`.
+3. `friends_screen.dart`: You deleted `_buildAvatar` when extracting `AvatarRing`, but you left a reference to `_buildAvatar` inside `_FriendTile` (line 1130). Update `_FriendTile` to use your new extracted component.
+
+Please carefully check your syntax in `home_screen.dart` and ensure the project compiles.
+
+
+## Goal
+Implement Phase 2 of the feedback: Home Page & Dashboard UI Enhancements.
+
+## Objectives
+1. **Next Book Timer (Item #1):** In the dashboard's `TodayDropCard`, if the drop is completed (already read/done), display a countdown timer: "Your next book is available in [x] hours [x] min". The countdown should target midnight (or a simulated daily refresh time).
+2. **Horizontal Gifts Received (Item #8):** Refactor the "Gifts received by friends" section (`SocialDropsCard`) on the Home Page to use a horizontal scroll (`ListView.horizontal`) instead of taking up the full vertical space.
+3. **Send to Friends Carousel (Item #9):** Add a new horizontally scrolling list on the Home Page displaying the user's friends.
+   - Title: "Send a book to your friends"
+   - Behavior: Hide the section completely if the user has no friends added.
+   - Design: It must look identical to the "closest streaks" horizontal carousel on the Friends screen (e.g., using the custom gradient avatar rings, streak badges, and matching typography).
+
+## Instructions & Ponytail Constraints
+- **YAGNI / Reusability:** For the "Send to Friends Carousel" on the Home Page, DO NOT duplicate the complex `_buildGradientAvatarRing` or streak badge logic from `friends_screen.dart`. Extract the avatar ring and streak badge into a shared widget file (e.g. `lib/src/shared/widgets/avatar_ring.dart` or similar) and reuse it in both the Home Page and Friends Screen.
+- Use `ListView.builder` with `scrollDirection: Axis.horizontal` for the gifts and friends sections to minimize rendering overhead.
+- Ensure all logic has proper error handling and does not rely on overly heavy external timer libraries for the Next Book Timer (a simple `Timer.periodic` or stream builder targeting midnight is sufficient).

@@ -102,6 +102,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
           'whatItsAbout': bookData['whatItsAbout'] ?? '',
           'lessons': parsedLessons,
           'summary': bookData['summary'] ?? '',
+          'coverUrl': bookData['coverUrl'] as String?,
           'isRead': true,
           'giftedBy': drop.senderProfile?.name,
         }));
@@ -377,6 +378,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                                   'whatItsAbout': drop.whatItsAbout,
                                   'lessons': drop.lessons,
                                   'summary': drop.summary,
+                                  if (drop.coverUrl != null) 'coverUrl': drop.coverUrl,
                                 });
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(content: Text('Book sent!')),

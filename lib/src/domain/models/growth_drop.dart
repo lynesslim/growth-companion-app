@@ -7,6 +7,7 @@ class GrowthDrop {
   final String whatItsAbout;
   final List<String> lessons;
   final String summary;
+  final String? coverUrl;
   final bool isRead;
   final bool isSaved;
   final String? giftedBy;
@@ -20,6 +21,7 @@ class GrowthDrop {
     required this.whatItsAbout,
     required this.lessons,
     required this.summary,
+    this.coverUrl,
     this.isRead = false,
     this.isSaved = false,
     this.giftedBy,
@@ -34,6 +36,7 @@ class GrowthDrop {
         whatItsAbout: whatItsAbout,
         lessons: lessons,
         summary: summary,
+        coverUrl: coverUrl,
         isRead: isRead ?? this.isRead,
         isSaved: isSaved ?? this.isSaved,
         giftedBy: giftedBy,
@@ -48,6 +51,7 @@ class GrowthDrop {
         'whatItsAbout': whatItsAbout,
         'lessons': lessons,
         'summary': summary,
+        'coverUrl': coverUrl,
         'isRead': isRead,
         'isSaved': isSaved,
         'giftedBy': giftedBy,
@@ -62,6 +66,7 @@ class GrowthDrop {
         whatItsAbout: json['whatItsAbout'] as String,
         lessons: (json['lessons'] as List<dynamic>).cast<String>(),
         summary: json['summary'] as String,
+        coverUrl: json['coverUrl'] as String?,
         isRead: json['isRead'] as bool? ?? false,
         isSaved: json['isSaved'] as bool? ?? false,
         giftedBy: json['giftedBy'] as String?,

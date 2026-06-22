@@ -435,6 +435,7 @@ class SocialNotifier extends AsyncNotifier<SocialState> {
           'whatItsAbout': bookData.whatItsAbout,
           'lessons': bookData.lessons,
           'summary': bookData.summary,
+          if (bookData.coverUrl != null) 'coverUrl': bookData.coverUrl,
         },
         'is_read': true,
       });

@@ -69,8 +69,10 @@ GrowthDrop fromSupabase(Map<String, dynamic> json) {
   String parseList(String key1, [String? key2]) {
     final raw = bookMap[key1] ?? (key2 != null ? bookMap[key2] : null);
     if (raw is List) {
-      return raw.map((e) => '• ${e.toString()}').join('\n');
+      return raw.map((e) => e.toString()).join('\n');
     }
+    // ponytail: handle literal \n from backend strings
+    if (raw is String) return raw.replaceAll('\\n', '\n');
     return raw?.toString() ?? '';
   }
 
@@ -85,6 +87,7 @@ GrowthDrop fromSupabase(Map<String, dynamic> json) {
         ? (bookMap['lessons'] as List).map((e) => e.toString()).toList()
         : [],
     summary: parseList('summary'),
+    coverUrl: bookMap['coverUrl'] as String?,
     isRead: json['is_read'] as bool? ?? false,
     isSaved: json['is_saved'] as bool? ?? false,
   );

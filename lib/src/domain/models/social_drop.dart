@@ -35,6 +35,7 @@ class SocialDrop {
         'whatItsAbout': bookDataJson['whatItsAbout'] ?? '',
         'lessons': bookDataJson['lessons'] ?? [],
         'summary': bookDataJson['summary'] ?? '',
+        'coverUrl': bookDataJson['coverUrl'] as String?,
         'isRead': json['is_opened'] ?? false,
         'giftedBy': senderProfile?.name,
       });

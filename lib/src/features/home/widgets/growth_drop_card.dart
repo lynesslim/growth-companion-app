@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supa;
@@ -301,7 +302,7 @@ class _GrowthDropCardState extends ConsumerState<GrowthDropCard>
                           ],
                         ),
                         const SizedBox(height: 16),
-                        // Larger Book Cover Style Card
+                        // Book Cover – renders SVG string or falls back to gradient card
                         EntranceFadeSlide(
                           delayMs: 400,
                           child: AnimatedBuilder(
@@ -310,58 +311,7 @@ class _GrowthDropCardState extends ConsumerState<GrowthDropCard>
                               offset: Offset(0, -4 * _ctrl.value),
                               child: child,
                             ),
-                            child: Container(
-                              width: 125,
-                              height: 180,
-                              decoration: BoxDecoration(
-                                gradient: AppGradients.cardBgGradient,
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.22),
-                                    blurRadius: 12,
-                                    offset: const Offset(4, 8),
-                                  ),
-                                ],
-                              ),
-                              padding: const EdgeInsets.all(12),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Container(
-                                    width: 24,
-                                    height: 24,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.12),
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: const Icon(Icons.menu_book_rounded, color: AppColors.goldAccent, size: 12),
-                                  ),
-                                  const Spacer(),
-                                  Text(
-                                    drop.valueOrNull?.bookTitle ?? 'Your Drop',
-                                    maxLines: 4,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.playfairDisplay(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.white,
-                                      height: 1.25,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    drop.valueOrNull?.bookAuthor ?? 'Growth Guide',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 9,
-                                      color: Colors.white70,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                            child: _BookCover(coverUrl: drop.valueOrNull?.coverUrl),
                           ),
                         ),
                       ],
@@ -474,6 +424,96 @@ class _CtaButtonState extends State<_CtaButton>
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _BookCover extends StatelessWidget {
+  final String? coverUrl;
+  const _BookCover({this.coverUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    if (coverUrl != null && coverUrl!.trim().isNotEmpty) {
+      try {
+        return Container(
+          width: 125,
+          height: 180,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.22),
+                blurRadius: 12,
+                offset: const Offset(4, 8),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: SvgPicture.string(
+              coverUrl!,
+              width: 125,
+              height: 180,
+              fit: BoxFit.cover,
+            ),
+          ),
+        );
+      } catch (_) {
+        // ponytail: SVG parse failed – fall through to gradient fallback
+      }
+    }
+    return Container(
+      width: 125,
+      height: 180,
+      decoration: BoxDecoration(
+        gradient: AppGradients.cardBgGradient,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.22),
+            blurRadius: 12,
+            offset: const Offset(4, 8),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: const Icon(Icons.menu_book_rounded, color: AppColors.goldAccent, size: 12),
+          ),
+          const Spacer(),
+          Text(
+            'Your Drop',
+            maxLines: 4,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.playfairDisplay(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+              height: 1.25,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Growth Guide',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 9,
+              color: Colors.white70,
+            ),
+          ),
+        ],
       ),
     );
   }

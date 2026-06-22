@@ -310,6 +310,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen> {
         'whatItsAbout': bookData['whatItsAbout'] ?? '',
         'lessons': parsedLessons,
         'summary': bookData['summary'] ?? '',
+        'coverUrl': bookData['coverUrl'] as String?,
         'isRead': true,
         'giftedBy': drop.senderProfile?.name,
       });

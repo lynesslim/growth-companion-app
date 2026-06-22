@@ -1,14 +1,23 @@
-# Deepseek Implementation Plan - Phase 3
+# Deepseek Implementation Plan - Phase 4
+
+**QA REJECTION (PLEASE FIX):**
+You successfully made the code changes, but you hallucinated the version number for `flutter_svg` in `pubspec.yaml` as `^22.0.0`, which does not exist! This broke `flutter pub get`.
+Please update `pubspec.yaml` to use a real version like `^2.3.0` and run `flutter pub get` and `flutter analyze` to ensure the project compiles.
+
+
+**QA REJECTION (PLEASE FIX):**
+You exited successfully without actually modifying any files! Your internal log shows that you attempted to run a `grep` shell command which was auto-rejected due to permissions, so you gave up.
+Please do NOT run shell commands with wildcards. Just use your internal file reading tools or read the specific files you need (`lib/src/features/home/widgets/social_drops_card.dart`, `lib/src/features/dashboard/dashboard_shell.dart`, etc.) and actually implement the SVG covers and Key Takeaways fixes.
+
 
 ## Goal
-Implement Phase 3 of the feedback: Social & Streak Logic Adjustments.
+Implement Phase 4 of the feedback: Content Generation UI (Covers & Takeaways).
 
 ## Objectives
-1. **Post-Reading Modal (Item #2):** When a user completes their daily book (`StreakCompleteScreen` or similar), and they navigate back to the Home Page, trigger a modal popup showing "Check out your friends' streaks and gifts!" This should ONLY trigger ONCE per day.
-2. **Share Text Update (Item #5):** Update all "Share" button texts across the app (in `StreakCompleteScreen`, `FriendsScreen`, `SocialScreen`) to use this exact template: "Look what I'm learning on Growth Companion: [Link]". Make sure you use the `share_plus` package properly (e.g. `Share.share(...)`) and replace any deprecated `share()` calls you see.
-3. **24h Streak Expiration (Item #7):** Ensure that if a user does not read a book within 24 hours, their streak automatically expires (resets to 0). You will need to implement this check in the relevant domain model/provider logic (e.g., `UserProvider` or `SocialProvider`) when the app calculates the user's current streak.
+1. **Dynamic AI SVG Book Covers (Item #6):** Our backend Python script now successfully injects raw SVG strings directly into the `coverUrl` property of the `GrowthDrop` JSON. Update the Flutter UI (specifically `lib/src/features/books/book_flip_screen.dart` and `lib/src/features/home/widgets/growth_drop_card.dart`) to render these dynamic SVGs instead of the hardcoded placeholder assets.
+2. **Key Takeaways UI Fix (Item #3):** The "Key Takeaways" in the dashboard are currently showing up as one giant block of text because the newlines aren't rendering properly. Update the UI widget responsible for displaying the summary/takeaways to ensure it parses bullet points or newlines correctly.
 
 ## Instructions & Ponytail Constraints
-- **YAGNI:** For the Post-Reading Modal, just track the "last shown date" in `SharedPreferences`. Do not build a complex database tracking system for a simple daily modal.
-- Use `Share.share(text)` from `share_plus` correctly to avoid the deprecated `Share` API warnings you saw in the analyzer logs earlier.
-- Ensure the Streak expiration check is robust and gracefully handles timezone issues by strictly comparing `DateTime.now().difference(lastReadDate).inHours > 24`.
+- **SVG Rendering:** Use `flutter_svg` to render the SVG strings. If `coverUrl` is an SVG string, you can use `SvgPicture.string()`. To ensure backwards compatibility with older items or errors, wrap it in a fallback that still shows the placeholder if parsing fails.
+- You must add `flutter_svg` to `pubspec.yaml` if it is not already there.
+- **Linebreaks:** For the Key Takeaways, you can either replace `\n` with actual widget spacing using a simple `String.split('\n')` loop, or just use a standard Text widget but ensure the string interpolation doesn't strip the newline characters. Keep it simple.

@@ -46,15 +46,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
     HapticFeedback.lightImpact();
     final inviteLink = '${Uri.base.origin}/#/invite?sender=$userId';
     
-    final journalState = ref.read(journalProvider).valueOrNull;
-    String shareText;
-    
-    if (journalState != null && journalState.isNotEmpty) {
-      final latestBook = journalState.first;
-      shareText = 'I just read "${latestBook.bookTitle}" by ${latestBook.bookAuthor} and it was amazing! Try the app and let\'s share books daily. Join me here: $inviteLink';
-    } else {
-      shareText = 'I\'ve been using this amazing app to build my reading habit and share books daily. Try it out and let\'s start a reading streak together! Join me here: $inviteLink';
-    }
+    final shareText = 'Look what I\'m learning on Growth Companion: $inviteLink';
     
     try {
       Share.share(shareText);

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:confetti/confetti.dart';
 import '../../core/app_colors.dart';
@@ -172,7 +173,10 @@ class _StreakCompleteScreenState extends ConsumerState<StreakCompleteScreen> {
               SizedBox(
                 width: double.infinity,
                 child: GestureDetector(
-                  onTap: () => context.go('/'),
+                  onTap: () async {
+                    (await SharedPreferences.getInstance()).setBool('_pendingStreakComplete', true);
+                    if (context.mounted) context.go('/');
+                  },
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 18),
                     decoration: BoxDecoration(
@@ -273,7 +277,7 @@ class _StreakCompleteScreenState extends ConsumerState<StreakCompleteScreen> {
   void _inviteViaWhatsApp(BuildContext context, WidgetRef ref, GrowthDrop bookData) {
     final userId = ref.read(userProvider).valueOrNull?.id;
     final inviteLink = userId != null ? ' Join me here: ${Uri.base.origin}/#/invite?sender=$userId&drop_id=${bookData.id}' : '';
-    final shareText = 'I just read "${bookData.bookTitle}" by ${bookData.bookAuthor} and it was amazing! Try the app and let\'s share books daily.$inviteLink';
+    final shareText = 'Look what I\'m learning on Growth Companion: $inviteLink';
     
     try {
       Share.share(shareText);

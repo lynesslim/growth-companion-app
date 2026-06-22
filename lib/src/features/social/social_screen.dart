@@ -48,7 +48,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen> {
     final inviteLink = '${Uri.base.origin}/#/invite?sender=$userId';
     
     try {
-      Share.share('Read with me! I\'m sending you a daily blind-box book drop. Join here: $inviteLink');
+      Share.share('Look what I\'m learning on Growth Companion: $inviteLink');
     } catch (_) {}
     Clipboard.setData(ClipboardData(text: inviteLink));
     ScaffoldMessenger.of(context).showSnackBar(

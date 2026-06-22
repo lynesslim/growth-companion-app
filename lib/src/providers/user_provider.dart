@@ -42,9 +42,16 @@ class UserStateNotifier extends StateNotifier<AsyncValue<User>> {
   Future<void> updateStreak() async {
     state = await AsyncValue.guard(() async {
       final user = await _repository.getUserProfile();
-      final today = DateTime.now();
-      final todayDate = DateTime(today.year, today.month, today.day);
+      final now = DateTime.now();
       final lastActive = user.lastDropDate;
+
+      // ponytail: 24h wall-clock expiration; timezone-safe strict comparison
+      if (lastActive != null && now.difference(lastActive).inHours > 24) {
+        return _repository.updateStreak(0,
+            DateTime(now.year, now.month, now.day).toIso8601String().split('T')[0]);
+      }
+
+      final todayDate = DateTime(now.year, now.month, now.day);
       final lastActiveDate = lastActive != null
           ? DateTime(lastActive.year, lastActive.month, lastActive.day)
           : null;

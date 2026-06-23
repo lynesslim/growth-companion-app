@@ -48,7 +48,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       if (authState.isLoading || userState.isLoading) return null;
       
       // Enforce splash screen on first boot
-      if (!SplashState.hasFinished && state.matchedLocation != '/splash') {
+      if (!SplashState.hasFinished && state.matchedLocation != '/splash' && state.matchedLocation != '/invite') {
         return '/splash';
       }
       

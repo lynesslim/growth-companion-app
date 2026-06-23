@@ -1,16 +1,17 @@
-Please implement the following exact changes:
+Please implement the following exact changes to fix the invite link flow and modal race conditions.
 
-### 1. Dashboard Navbar Opacity
-- Modify `lib/src/features/dashboard/dashboard_shell.dart`.
-- Change the background container's alpha value for the navbar from `0.65` to `0.50` (`AppColors.secondarySurface.withValues(alpha: 0.50)`).
+### 1. Fix Splash Screen blocking `/invite` route
+- **File**: `lib/src/core/router.dart`
+- **Action**: Locate the `// Enforce splash screen on first boot` redirect block.
+- **Change**: Exempt the `/invite` route so that the `InviteLandingScreen` can properly load and stash the invite tokens before the user is forced through the onboarding funnel.
+```dart
+      // Enforce splash screen on first boot
+      if (!SplashState.hasFinished && state.matchedLocation != '/splash' && state.matchedLocation != '/invite') {
+        return '/splash';
+      }
+```
 
-### 2. "Thing To Do" Screen Updates
-- Modify `lib/src/features/books/book_flip_screen.dart`.
-- Find `_ActionableInsightsPage`.
-- Change the title text from "Actionable Insights" (or its current title) to "Thing To Do".
-- Convert the numbered list into a list of interactive Checkboxes.
-
-### 3. Persistent Checkbox State
-- Convert `_ActionableInsightsPage` to a `StatefulWidget`.
-- Use `SharedPreferences` to load and save the boolean state of each checkbox.
-- Use a unique storage key pattern like `drop_${widget.book.id}_insight_$index` to ensure the checked state is permanently tied to that specific drop and insight item.
+### 2. Fix "Today's Drop" modal popping up during onboarding
+- **File**: `lib/src/features/auth/login_screen.dart`
+- **Action**: Completely delete the `ref.listenManual(authStateProvider)` listener block inside of the `initState()` method.
+- **Reason**: `LoginScreen` currently forces a premature `context.go('/')` upon signup/login. This races against the native `GoRouter` redirect, causing the `HomeScreen` to momentarily instantiate and fire its modal popups *underneath* the onboarding screen. By deleting this listener, we allow GoRouter's global `redirect` block to cleanly handle the routing natively.

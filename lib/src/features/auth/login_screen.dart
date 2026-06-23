@@ -27,11 +27,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    ref.listenManual(authStateProvider, (_, next) {
-      if (next.valueOrNull != null && mounted) {
-        context.go('/');
-      }
-    });
   }
 
   @override

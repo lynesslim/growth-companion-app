@@ -1,23 +1,16 @@
-Please implement the following logic fixes regarding the personal streak calculation:
+Please implement the following exact changes:
 
-### 1. Fix the `updateStreak` Logic in UserProvider
-We will completely rewrite `updateStreak` inside `lib/src/providers/user_provider.dart` to strictly use calendar days, removing the broken 24-hour wall-clock rule.
+### 1. Dashboard Navbar Opacity
+- Modify `lib/src/features/dashboard/dashboard_shell.dart`.
+- Change the background container's alpha value for the navbar from `0.65` to `0.50` (`AppColors.secondarySurface.withValues(alpha: 0.50)`).
 
-**Logic:**
-- Compare `DateTime.now()` (current calendar day) against the user's `lastDropDate` (converted to a calendar day).
-- If `lastDropDate == today`, keep streak the same (already completed today).
-- If `lastDropDate == yesterday`, increment streak by `+1`.
-- If `lastDropDate < yesterday` (or null), reset streak to `1`.
+### 2. "Thing To Do" Screen Updates
+- Modify `lib/src/features/books/book_flip_screen.dart`.
+- Find `_ActionableInsightsPage`.
+- Change the title text from "Actionable Insights" (or its current title) to "Thing To Do".
+- Convert the numbered list into a list of interactive Checkboxes.
 
-- Rewrite `updateStreak()` to use pure calendar-day `DateTime(year, month, day)` comparisons.
-- Remove the `now.difference(lastActive).inHours > 24` rule entirely.
-
-### 2. Move the Streak Trigger to `markAsRead`
-Currently, the streak and XP are awarded in `saveToJournal`. This will be moved so that simply finishing the book triggers the rewards.
-
-- Inside `lib/src/providers/growth_drop_provider.dart`:
-- Remove `await ref.read(userProvider.notifier).updateStreak();` and `updateXp(15)` from `saveToJournal`.
-- Add them into `markAsRead(GrowthDrop currentDrop)`.
-- **Validation:** Before awarding the streak/XP in `markAsRead`, we will strictly verify that `currentDrop` is *actually* today's drop:
-  - Verify `currentDrop.date` matches today's calendar date (`DateTime(now.year, now.month, now.day)`).
-  - Verify `currentDrop.focusArea != 'Social Drop'` (meaning it is a personal daily drop, not a friend's drop).
+### 3. Persistent Checkbox State
+- Convert `_ActionableInsightsPage` to a `StatefulWidget`.
+- Use `SharedPreferences` to load and save the boolean state of each checkbox.
+- Use a unique storage key pattern like `drop_${widget.book.id}_insight_$index` to ensure the checked state is permanently tied to that specific drop and insight item.

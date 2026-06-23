@@ -69,7 +69,7 @@ class _FloatingBottomNav extends StatelessWidget {
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
           child: Container(
-            color: AppColors.secondarySurface.withValues(alpha: 0.65),
+            color: AppColors.secondarySurface.withValues(alpha: 0.50),
             child: Row(
               children: List.generate(items.length, (i) {
                 final isSelected = currentIndex == i;

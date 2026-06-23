@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/app_typography.dart';
@@ -383,14 +384,54 @@ String _cleanAiText(String text) {
   return lines.join('\n');
 }
 
-class _ActionableInsightsPage extends StatelessWidget {
+class _ActionableInsightsPage extends StatefulWidget {
   final GrowthDrop book;
 
   const _ActionableInsightsPage({required this.book});
 
   @override
+  State<_ActionableInsightsPage> createState() => _ActionableInsightsPageState();
+}
+
+class _ActionableInsightsPageState extends State<_ActionableInsightsPage> {
+  final List<bool> _checked = [];
+  bool _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStates();
+  }
+
+  void _loadStates() async {
+    final prefs = await SharedPreferences.getInstance();
+    final insights = widget.book.actionableInsights ?? [];
+    setState(() {
+      _checked.clear();
+      for (var i = 0; i < insights.length; i++) {
+        final key = 'drop_${widget.book.id}_insight_$i';
+        _checked.add(prefs.getBool(key) ?? false);
+      }
+      _loaded = true;
+    });
+  }
+
+  void _toggle(int index) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = 'drop_${widget.book.id}_insight_$index';
+
+    setState(() {
+      _checked[index] = !_checked[index];
+    });
+    await prefs.setBool(key, _checked[index]);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final insights = book.actionableInsights ?? [];
+    final insights = widget.book.actionableInsights ?? [];
+    if (!_loaded) {
+      return const Center(child: CircularProgressIndicator());
+    }
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(28),
@@ -423,7 +464,7 @@ class _ActionableInsightsPage extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           Text(
-            'Actionable Insights',
+            'Thing To Do',
             style: AppTypography.h1Playfair.copyWith(
               fontSize: 22,
               color: AppColors.grey900,
@@ -434,48 +475,59 @@ class _ActionableInsightsPage extends StatelessWidget {
             child: ListView.separated(
               itemCount: insights.length,
               separatorBuilder: (_, _) => const SizedBox(height: 12),
-              itemBuilder: (context, index) => Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.warning.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: AppColors.warning.withValues(alpha: 0.15),
+              itemBuilder: (context, index) => GestureDetector(
+                onTap: () => _toggle(index),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.warning.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: AppColors.warning.withValues(alpha: 0.15),
+                    ),
                   ),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 28,
-                      height: 28,
-                      decoration: const BoxDecoration(
-                        color: AppColors.warning,
-                        shape: BoxShape.circle,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          color: _checked[index]
+                              ? AppColors.warning
+                              : Colors.transparent,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppColors.warning,
+                            width: 2,
+                          ),
+                        ),
+                        child: _checked[index]
+                            ? const Icon(
+                                Icons.check_rounded,
+                                color: AppColors.white,
+                                size: 18,
+                              )
+                            : null,
                       ),
-                      child: Center(
+                      const SizedBox(width: 12),
+                      Expanded(
                         child: Text(
-                          '${index + 1}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.white,
+                          _cleanAiText(insights[index]),
+                          style: TextStyle(
+                            fontSize: 15,
+                            height: 1.5,
+                            color: _checked[index]
+                                ? AppColors.grey400
+                                : AppColors.grey700,
+                            decoration: _checked[index]
+                                ? TextDecoration.lineThrough
+                                : null,
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        _cleanAiText(insights[index]),
-                        style: const TextStyle(
-                          fontSize: 15,
-                          height: 1.5,
-                          color: AppColors.grey700,
-                        ),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

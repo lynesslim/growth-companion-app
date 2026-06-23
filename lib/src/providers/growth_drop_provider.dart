@@ -103,6 +103,10 @@ GrowthDrop fromSupabase(Map<String, dynamic> json) {
         ? (bookMap['lessons'] as List).map((e) => e.toString()).toList()
         : [],
     summary: parseList('summary'),
+    caseStudy: bookMap['caseStudy'] as String?,
+    actionableInsights: bookMap['actionableInsights'] != null
+        ? (bookMap['actionableInsights'] as List).map((e) => e.toString()).toList()
+        : null,
     coverUrl: bookMap['coverUrl'] as String?,
     isRead: json['is_read'] as bool? ?? false,
     isSaved: json['is_saved'] as bool? ?? false,

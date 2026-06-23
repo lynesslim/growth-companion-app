@@ -22,8 +22,14 @@ Output strictly as a JSON object using this exact schema:
 "Chapter Y: Chapter Title\n\n[Paragraph 1]\n\n[Paragraph 2]\n\n[Paragraph 3]\n\n[Paragraph 4]",
 "Chapter Z: Chapter Title\n\n[Paragraph 1]\n\n[Paragraph 2]\n\n[Paragraph 3]\n\n[Paragraph 4]"
 ],
+"caseStudy": "[Paragraph 1: Hook the reader by introducing a real historical or contemporary figure and their specific challenge.]\n\n[Paragraph 2: Provide context on the struggle.]\n\n[Paragraph 3: Detail the specific action they took, illustrating the lessons in practice.]\n\n[Paragraph 4: Describe the outcome or result of their action.]\n\n[Paragraph 5: A brief concluding thought.]",
+"actionableInsights": [
+"Insight 1: Do X to achieve Y.",
+"Insight 2: Practice Z when facing W.",
+"Insight 3: Implement A by starting with B."
+],
 "summary": "1. First takeaway under ten words.\n2. Second takeaway under ten words.\n3. Third takeaway under ten words.\n\nQuote: \"A real quote from the book or a real relevant quote from the author/book context.\"",
-"coverUrl": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 400 600\"><rect width=\"400\" height=\"600\" fill=\"#2A2A2A\"/><text x=\"200\" y=\"300\" fill=\"#FFFFFF\" font-size=\"24\" text-anchor=\"middle\">Book Title</text></svg>"
+"coverUrl": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 400 600\"><rect width=\"400\" height=\"600\" fill=\"#2A2A2A\"/><circle cx=\"200\" cy=\"300\" r=\"100\" fill=\"#FF5722\"/></svg>"
 }
 
 CRITICAL REQUIREMENTS:
@@ -44,6 +50,11 @@ LESSON REQUIREMENTS
 * Do not invent chapter names or numbering.
 * Each lesson must be approximately 350 words.
 * Each lesson must contain short paragraphs separated by two line breaks (\n\n).
+
+CASE STUDY & INSIGHTS REQUIREMENTS
+
+* `caseStudy`: Must be a compelling, true historical or contemporary story about a real person (e.g., a known historical figure, entrepreneur, or leader) facing a struggle related to the lessons. Describe the situation, how they applied the core concepts of the lessons, and the outcome. Write it as an engaging, factual narrative (150-250 words) rather than a generic summary. Format the case study into 4-6 short, punchy paragraphs separated by two line breaks (\n\n) to ensure readability.
+* `actionableInsights`: Must be exactly 3 micro-actions the reader can take today based on the lessons. Each insight should be a single, punchy, actionable sentence.
 
 VOICE & TONE RESTRICTIONS (STRICT)
 * You MUST write in an ACTIVE, DECLARATIVE voice.
@@ -74,7 +85,7 @@ SUMMARY REQUIREMENTS
 
 OUTPUT REQUIREMENTS
 
-* You MUST generate a visually beautiful, minimalist SVG book cover in the `coverUrl` field. Use ONLY standard vector shapes (<rect>, <circle>, <path>, <text>). DO NOT use <style> blocks, CSS classes, or <foreignObject>. Inline all styling (e.g., fill="#FF0000").
+* You MUST generate a visually beautiful, highly detailed, abstract SVG illustration that reflects the core concept of the book in the `coverUrl` field. Use rich color palettes, overlapping geometric layers, and abstract compositions to make it feel like a premium, modern book cover. DO NOT include any text, <text> nodes, or the book title in the SVG. The app will overlay the text itself. Use ONLY standard vector shapes (<rect>, <circle>, <path>, <polygon>). DO NOT use <style> blocks, CSS classes, or <foreignObject>. Inline all styling (e.g., fill="#FF0000").
 * Return valid JSON only.
 * Do not include markdown.
 * Do not include explanatory text before or after the JSON.
@@ -103,8 +114,14 @@ Output strictly as a JSON object using this exact schema:
 "Chapter Y: Chapter Title\n\n[Paragraph 1]\n\n[Paragraph 2]\n\n[Paragraph 3]\n\n[Paragraph 4]",
 "Chapter Z: Chapter Title\n\n[Paragraph 1]\n\n[Paragraph 2]\n\n[Paragraph 3]\n\n[Paragraph 4]"
 ],
+"caseStudy": "[Paragraph 1: Hook the reader by introducing a real historical or contemporary figure and their specific challenge.]\n\n[Paragraph 2: Provide context on the struggle.]\n\n[Paragraph 3: Detail the specific action they took, illustrating the lessons in practice.]\n\n[Paragraph 4: Describe the outcome or result of their action.]\n\n[Paragraph 5: A brief concluding thought.]",
+"actionableInsights": [
+"Insight 1: Do X to achieve Y.",
+"Insight 2: Practice Z when facing W.",
+"Insight 3: Implement A by starting with B."
+],
 "summary": "1. First takeaway under ten words.\n2. Second takeaway under ten words.\n3. Third takeaway under ten words.\n\nQuote: \"A real quote from the book or a real relevant quote from the author/book context.\"",
-"coverUrl": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 400 600\"><rect width=\"400\" height=\"600\" fill=\"#2A2A2A\"/><text x=\"200\" y=\"300\" fill=\"#FFFFFF\" font-size=\"24\" text-anchor=\"middle\">Book Title</text></svg>"
+"coverUrl": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 400 600\"><rect width=\"400\" height=\"600\" fill=\"#2A2A2A\"/><circle cx=\"200\" cy=\"300\" r=\"100\" fill=\"#FF5722\"/></svg>"
 }
 
 CRITICAL REQUIREMENTS:
@@ -125,6 +142,11 @@ LESSON REQUIREMENTS
 * Do not invent chapter names or numbering.
 * Each lesson must be approximately 350 words.
 * Each lesson must contain short paragraphs separated by two line breaks (\n\n).
+
+CASE STUDY & INSIGHTS REQUIREMENTS
+
+* `caseStudy`: Must be a compelling, true historical or contemporary story about a real person (e.g., a known historical figure, entrepreneur, or leader) facing a struggle related to the lessons. Describe the situation, how they applied the core concepts of the lessons, and the outcome. Write it as an engaging, factual narrative (150-250 words) rather than a generic summary. Format the case study into 4-6 short, punchy paragraphs separated by two line breaks (\n\n) to ensure readability.
+* `actionableInsights`: Must be exactly 3 micro-actions the reader can take today based on the lessons. Each insight should be a single, punchy, actionable sentence.
 
 VOICE & TONE RESTRICTIONS (STRICT)
 * You MUST write in an ACTIVE, DECLARATIVE voice.
@@ -155,7 +177,7 @@ SUMMARY REQUIREMENTS
 
 OUTPUT REQUIREMENTS
 
-* You MUST generate a visually beautiful, minimalist SVG book cover in the `coverUrl` field. Use ONLY standard vector shapes (<rect>, <circle>, <path>, <text>). DO NOT use <style> blocks, CSS classes, or <foreignObject>. Inline all styling (e.g., fill="#FF0000").
+* You MUST generate a visually beautiful, highly detailed, abstract SVG illustration that reflects the core concept of the book in the `coverUrl` field. Use rich color palettes, overlapping geometric layers, and abstract compositions to make it feel like a premium, modern book cover. DO NOT include any text, <text> nodes, or the book title in the SVG. The app will overlay the text itself. Use ONLY standard vector shapes (<rect>, <circle>, <path>, <polygon>). DO NOT use <style> blocks, CSS classes, or <foreignObject>. Inline all styling (e.g., fill="#FF0000").
 * Return valid JSON only.
 * Do not include markdown.
 * Do not include explanatory text before or after the JSON.

@@ -36,6 +36,10 @@ class SocialDrop {
         'lessons': bookDataJson['lessons'] ?? [],
         'summary': bookDataJson['summary'] ?? '',
         'coverUrl': bookDataJson['coverUrl'] as String?,
+        'caseStudy': bookDataJson['caseStudy'] as String?,
+        'actionableInsights': bookDataJson['actionableInsights'] != null
+            ? (bookDataJson['actionableInsights'] as List<dynamic>).cast<String>()
+            : null,
         'isRead': json['is_opened'] ?? false,
         'giftedBy': senderProfile?.name,
       });

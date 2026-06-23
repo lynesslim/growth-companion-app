@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -20,6 +21,15 @@ void main() async {
   runApp(const ProviderScope(child: GrowthCompanionApp()));
 }
 
+class CustomScrollBehavior extends MaterialScrollBehavior {
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.trackpad,
+      };
+}
+
 class GrowthCompanionApp extends ConsumerWidget {
   const GrowthCompanionApp({super.key});
 
@@ -27,6 +37,7 @@ class GrowthCompanionApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(goRouterProvider);
     return MaterialApp.router(
+      scrollBehavior: CustomScrollBehavior(),
       title: 'Growth Companion',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,

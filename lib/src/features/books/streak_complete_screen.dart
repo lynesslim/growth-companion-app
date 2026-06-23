@@ -259,6 +259,8 @@ class _StreakCompleteScreenState extends ConsumerState<StreakCompleteScreen> {
           'lessons': book.lessons,
           'summary': book.summary,
           if (book.coverUrl != null) 'coverUrl': book.coverUrl,
+          if (book.caseStudy != null) 'caseStudy': book.caseStudy,
+          if (book.actionableInsights != null) 'actionableInsights': book.actionableInsights,
         },
         'is_read': true,
         'is_saved': true,
@@ -362,6 +364,8 @@ class _StreakCompleteScreenState extends ConsumerState<StreakCompleteScreen> {
                             'lessons': bookData.lessons,
                             'summary': bookData.summary,
                             if (bookData.coverUrl != null) 'coverUrl': bookData.coverUrl,
+                            if (bookData.caseStudy != null) 'caseStudy': bookData.caseStudy,
+                            if (bookData.actionableInsights != null) 'actionableInsights': bookData.actionableInsights,
                           });
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text('Book sent!')),

@@ -30,12 +30,42 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _modalShown = false;
 
+  RouterDelegate? _routerDelegate;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final newDelegate = GoRouter.of(context).routerDelegate;
+    if (_routerDelegate != newDelegate) {
+      _routerDelegate?.removeListener(_onRouteChanged);
+      _routerDelegate = newDelegate;
+      _routerDelegate?.addListener(_onRouteChanged);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _processInvite();
     });
+  }
+
+  @override
+  void dispose() {
+    _routerDelegate?.removeListener(_onRouteChanged);
+    super.dispose();
+  }
+
+  void _onRouteChanged() {
+    if (!mounted) return;
+    if (GoRouterState.of(context).uri.path == '/') {
+      final dropState = ref.read(growthDropProvider);
+      final drop = dropState.valueOrNull;
+      if (drop != null && drop.isRead) {
+        _checkPostReadingModal();
+      }
+    }
   }
 
   Future<void> _processInvite() async {
@@ -109,10 +139,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       await prefs.remove('_pendingStreakComplete');
 
     final today = DateTime.now().toIso8601String().split('T')[0];
-    if (prefs.getString('_postReadingModalLastShown') == today) return;
-    await prefs.setString('_postReadingModalLastShown', today);
+    if (prefs.getString('_postReadingModalLastShown_v2') == today) return;
+    await prefs.setString('_postReadingModalLastShown_v2', today);
 
     if (!context.mounted) return;
+    if (GoRouterState.of(context).uri.path != '/') return;
     showDialog(
       context: context,
       barrierDismissible: true,
@@ -161,7 +192,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               child: GestureDetector(
                 onTap: () {
                   Navigator.pop(ctx);
-                  context.push('/social');
+                  context.go('/social');
                 },
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 16),
@@ -340,6 +371,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   void _showGenerateModal(BuildContext context) {
+    if (!context.mounted || GoRouterState.of(context).uri.path != '/') return;
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -525,6 +557,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
   void _showDropModal(BuildContext context) {
+    if (!context.mounted || GoRouterState.of(context).uri.path != '/') return;
     showDialog(
       context: context,
       barrierDismissible: false,

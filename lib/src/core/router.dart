@@ -17,6 +17,7 @@ import '../features/social/friend_profile_screen.dart';
 import '../features/social/friends_screen.dart';
 import '../features/onboarding/invite_landing_screen.dart';
 import '../features/onboarding/pre_onboarding_screen.dart';
+import '../features/onboarding/splash_screen.dart';
 import '../providers/auth_provider.dart';
 import '../providers/user_provider.dart';
 
@@ -37,7 +38,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
 
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
-    initialLocation: '/login',
+    initialLocation: '/splash',
     debugLogDiagnostics: true,
     refreshListenable: notifier,
     redirect: (context, state) {
@@ -46,14 +47,20 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       
       if (authState.isLoading || userState.isLoading) return null;
       
+      // Enforce splash screen on first boot
+      if (!SplashState.hasFinished && state.matchedLocation != '/splash') {
+        return '/splash';
+      }
+      
       final isAuthenticated = authState.valueOrNull != null;
       final isLoginRoute = state.matchedLocation == '/login';
+      final isSplashRoute = state.matchedLocation == '/splash';
       
       if (!isAuthenticated) {
-        if (!PreOnboardingState.hasSeen && state.matchedLocation != '/pre-onboarding' && state.matchedLocation != '/invite') {
+        if (!PreOnboardingState.hasSeen && state.matchedLocation != '/pre-onboarding' && state.matchedLocation != '/invite' && !isSplashRoute) {
           return '/pre-onboarding';
         }
-        if (PreOnboardingState.hasSeen && !isLoginRoute && state.matchedLocation != '/invite') {
+        if (PreOnboardingState.hasSeen && !isLoginRoute && state.matchedLocation != '/invite' && !isSplashRoute) {
           return '/login';
         }
       }
@@ -90,18 +97,47 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           return '/';
         }
       }
+      
+      // If finished splash and still on splash (redirect fallback), go home
+      if (SplashState.hasFinished && isSplashRoute) {
+        return '/'; // It will re-evaluate and go to login/home
+      }
+      
       return null;
     },
     routes: [
       GoRoute(
+        path: '/splash',
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const SplashScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
+      ),
+      GoRoute(
         path: '/pre-onboarding',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const PreOnboardingScreen(),
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const PreOnboardingScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
       ),
       GoRoute(
         path: '/login',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const LoginScreen(),
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const LoginScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
       ),
       GoRoute(
         path: '/invite',
@@ -157,8 +193,14 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       // Dashboard shell with bottom nav (landing after onboarding)
       StatefulShellRoute.indexedStack(
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state, navigationShell) {
-          return DashboardShell(navigationShell: navigationShell);
+        pageBuilder: (context, state, navigationShell) {
+          return CustomTransitionPage(
+            key: state.pageKey,
+            child: DashboardShell(navigationShell: navigationShell),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+          );
         },
         branches: [
           StatefulShellBranch(

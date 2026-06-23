@@ -172,6 +172,19 @@ class _BookCoverCard extends StatelessWidget {
             children: [
               // Background Layer
               backgroundWidget,
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withOpacity(0.8),
+                    ],
+                    stops: const [0.4, 1.0],
+                  ),
+                ),
+              ),
               // Text Overlay
               Padding(
                 padding: const EdgeInsets.all(16),

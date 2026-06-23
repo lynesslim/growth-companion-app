@@ -24,19 +24,19 @@ class _BookFlipScreenState extends ConsumerState<BookFlipScreen> {
   bool _isAnimating = false;
   final _pageController = PageController();
 
-  static const _pageNames = [
-    'Cover',
-    'Why This Book',
-    'Lesson 1',
-    'Lesson 2',
-    'Lesson 3',
-    'Summary',
-  ];
+  List<String> _getPageNames(GrowthDrop book) {
+    final names = <String>['Cover', 'Why This Book', 'Lesson 1', 'Lesson 2', 'Lesson 3'];
+    if (book.caseStudy != null) names.add('Case Study');
+    if (book.actionableInsights != null) names.add('Insights');
+    names.add('Summary');
+    return names;
+  }
 
   void _nextPage(GrowthDrop book) {
     HapticUtils.light();
     if (_isAnimating) return;
-    if (_currentPage >= _pageNames.length - 1) {
+    final pageNames = _getPageNames(book);
+    if (_currentPage >= pageNames.length - 1) {
       if (book.giftedBy == null) {
         ref.read(userProvider.notifier).updateStreak();
       }
@@ -118,7 +118,7 @@ class _BookFlipScreenState extends ConsumerState<BookFlipScreen> {
                     onPressed: () => context.pop(),
                   ),
                   const Spacer(),
-                  ...List.generate(_pageNames.length, (i) {
+                  ...List.generate(_getPageNames(book).length, (i) {
                     return AnimatedContainer(
                       duration: const Duration(milliseconds: 250),
                       margin: const EdgeInsets.symmetric(horizontal: 3),
@@ -134,7 +134,7 @@ class _BookFlipScreenState extends ConsumerState<BookFlipScreen> {
                   }),
                   const SizedBox(width: 8),
                   Text(
-                    '${_currentPage + 1}/${_pageNames.length}',
+                    '${_currentPage + 1}/${_getPageNames(book).length}',
                     style: const TextStyle(
                       color: AppColors.grey400,
                       fontWeight: FontWeight.w600,
@@ -178,7 +178,7 @@ class _BookFlipScreenState extends ConsumerState<BookFlipScreen> {
                     });
                   },
                   children: [
-                    for (var i = 0; i < _pageNames.length; i++)
+                    for (var i = 0; i < _getPageNames(book).length; i++)
                       _buildPageContent(i, book),
                   ],
                 ),
@@ -244,7 +244,7 @@ class _BookFlipScreenState extends ConsumerState<BookFlipScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            _currentPage == _pageNames.length - 1
+                            _currentPage == _getPageNames(book).length - 1
                                 ? 'Finish'
                                 : _currentPage == 0
                                     ? 'Open Book'
@@ -257,7 +257,7 @@ class _BookFlipScreenState extends ConsumerState<BookFlipScreen> {
                           ),
                           const SizedBox(width: 6),
                           Icon(
-                            _currentPage == _pageNames.length - 1
+                            _currentPage == _getPageNames(book).length - 1
                                 ? Icons.check_rounded
                                 : _currentPage == 0
                                     ? Icons.menu_book_rounded
@@ -279,25 +279,199 @@ class _BookFlipScreenState extends ConsumerState<BookFlipScreen> {
   }
 
   Widget _buildPageContent(int index, GrowthDrop book) {
-    switch (index) {
-      case 0:
+    final pageNames = _getPageNames(book);
+    switch (pageNames[index]) {
+      case 'Cover':
         return _CoverPage(book: book);
-      case 1:
+      case 'Why This Book':
         return _WhatItsAboutPage(book: book);
-      case 2:
-      case 3:
-      case 4:
-        return _LessonPage(
-          lessonNumber: index - 1,
-          lesson: book.lessons.length > index - 2 ? book.lessons[index - 2] : '',
-        );
-      case 5:
+      case 'Lesson 1':
+        return _LessonPage(lessonNumber: 1, lesson: book.lessons.isNotEmpty ? book.lessons[0] : '');
+      case 'Lesson 2':
+        return _LessonPage(lessonNumber: 2, lesson: book.lessons.length > 1 ? book.lessons[1] : '');
+      case 'Lesson 3':
+        return _LessonPage(lessonNumber: 3, lesson: book.lessons.length > 2 ? book.lessons[2] : '');
+      case 'Case Study':
+        return _CaseStudyPage(book: book);
+      case 'Insights':
+        return _ActionableInsightsPage(book: book);
+      case 'Summary':
         return _FinalSummaryPage(book: book);
       default:
         return const SizedBox();
     }
   }
 
+}
+
+class _CaseStudyPage extends StatelessWidget {
+  final GrowthDrop book;
+
+  const _CaseStudyPage({required this.book});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(28),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.06),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(
+              Icons.psychology_rounded,
+              color: AppColors.primary,
+              size: 22,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Case Study',
+            style: AppTypography.h1Playfair.copyWith(
+              fontSize: 22,
+              color: AppColors.grey900,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: Scrollbar(
+              thumbVisibility: true,
+              child: SingleChildScrollView(
+                child: Text(
+                  book.caseStudy ?? '',
+                  style: const TextStyle(
+                    fontSize: 15,
+                    height: 1.7,
+                    color: AppColors.grey600,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionableInsightsPage extends StatelessWidget {
+  final GrowthDrop book;
+
+  const _ActionableInsightsPage({required this.book});
+
+  @override
+  Widget build(BuildContext context) {
+    final insights = book.actionableInsights ?? [];
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(28),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.06),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.warning.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(
+              Icons.bolt_rounded,
+              color: AppColors.warning,
+              size: 22,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Actionable Insights',
+            style: AppTypography.h1Playfair.copyWith(
+              fontSize: 22,
+              color: AppColors.grey900,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: ListView.separated(
+              itemCount: insights.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 12),
+              itemBuilder: (context, index) => Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.warning.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: AppColors.warning.withValues(alpha: 0.15),
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: const BoxDecoration(
+                        color: AppColors.warning,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Text(
+                          '${index + 1}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        insights[index],
+                        style: const TextStyle(
+                          fontSize: 14,
+                          height: 1.6,
+                          color: AppColors.grey600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _CoverPage extends StatelessWidget {

@@ -33,202 +33,252 @@ class _PreOnboardingScreenState extends State<PreOnboardingScreen> {
   }
 
   void _onSkip() {
-    _pageController.animateToPage(2,
-        duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+    _onGetStarted();
+  }
+
+  void _onNext() {
+    if (_currentPage == 2) {
+      _onGetStarted();
+    } else {
+      _pageController.nextPage(
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOutCubic,
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.baseBackground,
       body: SafeArea(
+        bottom: false,
         child: Column(
           children: [
-            Expanded(
-              child: PageView(
-                controller: _pageController,
-                onPageChanged: (i) => setState(() => _currentPage = i),
-                children: const [
-                  _Slide(
-                    icon: Icons.auto_stories_rounded,
-                    title: 'Read Smarter,\nEvery Day',
-                    subtitle:
-                        'Get curated book summaries delivered daily.\nGrow your mind without the time commitment.',
-                  ),
-                  _Slide(
-                    icon: Icons.card_giftcard_rounded,
-                    title: 'Your Daily Drop',
-                    subtitle:
-                        'A new actionable insight awaits you each day.\nRead, reflect, and apply it to your life.',
-                  ),
-                  _Slide(
-                    icon: Icons.whatshot_rounded,
-                    title: 'Grow Together',
-                    subtitle:
-                        'Send books to your friends and maintain daily\nreading streaks. Stay consistent and hold\neach other accountable!',
-                  ),
-                ],
-              ),
+          // Content that slides together (Image + Text)
+          Expanded(
+            child: PageView(
+              controller: _pageController,
+              onPageChanged: (i) => setState(() => _currentPage = i),
+              children: [
+                _buildPage(
+                  image: 'assets/images/onboarding-illustration1.webp',
+                  subtitle: 'DAILY DROP',
+                  titleNormal: 'One summary\n',
+                  titleItalic: 'a day.',
+                  description: 'A book summary and\none action step, daily.',
+                ),
+                _buildPage(
+                  image: 'assets/images/onboarding-illustration2.webp',
+                  subtitle: 'SOCIAL DROPS',
+                  titleNormal: 'Share the\n',
+                  titleItalic: 'spark.',
+                  description: 'Send a book rec or a\nblind box to a friend.',
+                ),
+                _buildPage(
+                  image: 'assets/images/onboarding-illustration3.webp',
+                  subtitle: 'READ TOGETHER',
+                  titleNormal: 'Grow\n',
+                  titleItalic: 'together.',
+                  description: 'Keep a streak with friends\nand read more.',
+                ),
+              ],
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(3, (i) {
-                      return AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        margin: const EdgeInsets.symmetric(horizontal: 5),
-                        width: _currentPage == i ? 28 : 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(4),
-                          color: _currentPage == i
-                              ? AppColors.primary
-                              : AppColors.grey300,
-                        ),
-                      );
-                    }),
-                  ),
-                  const SizedBox(height: 32),
-                  if (_currentPage == 2)
-                    SizedBox(
-                      width: double.infinity,
-                      child: GestureDetector(
-                        onTap: _onGetStarted,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 18),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [AppColors.primary, AppColors.pinkLight],
-                              begin: Alignment.centerLeft,
-                              end: Alignment.centerRight,
-                            ),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: const Center(
-                            child: Text(
-                              'Get Started',
-                              style: TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.white,
-                              ),
-                            ),
-                          ),
-                        ),
+          ),
+          // Fixed Bottom Controls
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Column(
+              children: [
+                // Button
+                GestureDetector(
+                  onTap: _onNext,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 24),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AppColors.warning,
+                          AppColors.pinkLight,
+                          _currentPage == 2 ? AppColors.primary : AppColors.primaryLight,
+                        ],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
                       ),
-                    )
-                  else
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const SizedBox(width: 60),
-                        GestureDetector(
-                          onTap: _onSkip,
-                          child: const Text(
-                            'Skip',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.grey400,
-                            ),
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () {
-                            _pageController.nextPage(
-                              duration: const Duration(milliseconds: 300),
-                              curve: Curves.easeInOut,
-                            );
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 24, vertical: 12),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [AppColors.primary, AppColors.pinkLight],
-                                begin: Alignment.centerLeft,
-                                end: Alignment.centerRight,
-                              ),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Text(
-                              'Next',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.white,
-                              ),
-                            ),
-                          ),
+                      borderRadius: BorderRadius.circular(100),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withValues(alpha: 0.15),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
                         ),
                       ],
                     ),
-                  const SizedBox(height: 32),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Slide extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  const _Slide({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppColors.primary, AppColors.pinkLight],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(30),
-            ),
-            child: Icon(icon, color: AppColors.white, size: 56),
-          ),
-          const SizedBox(height: 40),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: AppTypography.h1Playfair.copyWith(
-              fontSize: 28,
-              color: AppColors.grey900,
-              height: 1.2,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            subtitle,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 16,
-              color: AppColors.grey500,
-              height: 1.6,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          _currentPage == 2 ? 'Get Started' : 'Next',
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.white,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(
+                          Icons.arrow_forward_rounded,
+                          color: AppColors.white,
+                          size: 20,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 32),
+                // Pagination
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(3, (i) {
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _currentPage == i
+                            ? AppColors.primaryLight
+                            : AppColors.grey200,
+                      ),
+                    );
+                  }),
+                ),
+                const SafeArea(top: false, child: SizedBox(height: 16)),
+              ],
             ),
           ),
         ],
       ),
+      ),
+    );
+  }
+
+  Widget _buildPage({
+    required String image,
+    required String subtitle,
+    required String titleNormal,
+    required String titleItalic,
+    required String description,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.only(top: 20),
+            decoration: BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage(image),
+                fit: BoxFit.contain,
+                alignment: Alignment.center,
+              ),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: _SlideContent(
+            subtitle: subtitle,
+            titleNormal: titleNormal,
+            titleItalic: titleItalic,
+            description: description,
+          ),
+        ),
+        const SizedBox(height: 32),
+      ],
+    );
+  }
+}
+
+class _SlideContent extends StatelessWidget {
+  final String subtitle;
+  final String titleNormal;
+  final String titleItalic;
+  final String description;
+
+  const _SlideContent({
+    required this.subtitle,
+    required this.titleNormal,
+    required this.titleItalic,
+    required this.description,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          subtitle,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.5,
+            color: AppColors.primaryLight,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              titleNormal.replaceAll('\n', ''), // strip newline
+              style: AppTypography.bodyInter.copyWith(
+                color: AppColors.grey900,
+                fontSize: 46,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -1.5,
+                height: 1.05,
+              ),
+            ),
+            Transform.translate(
+              offset: const Offset(0, -8), // pull up the italic text to tighten spacing
+              child: ShaderMask(
+                shaderCallback: (bounds) => const LinearGradient(
+                  colors: [AppColors.warning, AppColors.pink, AppColors.primary],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ).createShader(bounds),
+                child: Text(
+                  titleItalic,
+                  style: AppTypography.h1Playfair.copyWith(
+                    color: AppColors.white, // Masked out
+                    fontSize: 50,
+                    fontWeight: FontWeight.w700,
+                    fontStyle: FontStyle.italic,
+                    letterSpacing: -1.0,
+                    height: 1.2, // Prevent clipping
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Text(
+          description,
+          style: AppTypography.bodyInter.copyWith(
+            fontSize: 17,
+            height: 1.5,
+            color: AppColors.grey500,
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+      ],
     );
   }
 }

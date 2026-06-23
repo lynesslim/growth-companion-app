@@ -11,6 +11,8 @@ class GrowthDrop {
   final bool isRead;
   final bool isSaved;
   final String? giftedBy;
+  final String? caseStudy;
+  final List<String>? actionableInsights;
 
   const GrowthDrop({
     required this.id,
@@ -25,9 +27,17 @@ class GrowthDrop {
     this.isRead = false,
     this.isSaved = false,
     this.giftedBy,
+    this.caseStudy,
+    this.actionableInsights,
   });
 
-  GrowthDrop copyWith({bool? isRead, bool? isSaved}) => GrowthDrop(
+  GrowthDrop copyWith({
+    bool? isRead,
+    bool? isSaved,
+    String? caseStudy,
+    List<String>? actionableInsights,
+  }) =>
+      GrowthDrop(
         id: id,
         date: date,
         focusArea: focusArea,
@@ -40,6 +50,8 @@ class GrowthDrop {
         isRead: isRead ?? this.isRead,
         isSaved: isSaved ?? this.isSaved,
         giftedBy: giftedBy,
+        caseStudy: caseStudy ?? this.caseStudy,
+        actionableInsights: actionableInsights ?? this.actionableInsights,
       );
 
   Map<String, dynamic> toJson() => {
@@ -55,6 +67,8 @@ class GrowthDrop {
         'isRead': isRead,
         'isSaved': isSaved,
         'giftedBy': giftedBy,
+        if (caseStudy != null) 'caseStudy': caseStudy,
+        if (actionableInsights != null) 'actionableInsights': actionableInsights,
       };
 
   factory GrowthDrop.fromJson(Map<String, dynamic> json) => GrowthDrop(
@@ -70,5 +84,9 @@ class GrowthDrop {
         isRead: json['isRead'] as bool? ?? false,
         isSaved: json['isSaved'] as bool? ?? false,
         giftedBy: json['giftedBy'] as String?,
+        caseStudy: json['caseStudy'] as String?,
+        actionableInsights: json['actionableInsights'] != null
+            ? (json['actionableInsights'] as List<dynamic>).cast<String>()
+            : null,
       );
 }

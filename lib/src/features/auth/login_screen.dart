@@ -18,8 +18,11 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   bool _isLogin = true;
   bool _isLoading = false;
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
 
   @override
   void initState() {
@@ -35,6 +38,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -42,6 +46,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
     if (email.isEmpty || password.isEmpty) return;
+    
+    if (!_isLogin && password != _confirmPasswordController.text) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: const [
+              Icon(Icons.error_outline, color: AppColors.white, size: 20),
+              SizedBox(width: 12),
+              Expanded(child: Text('Passwords do not match')),
+            ],
+          ),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      return;
+    }
 
     setState(() => _isLoading = true);
     try {
@@ -88,30 +110,58 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               children: [
                 EntranceFadeSlide(
                   delayMs: 0,
-                  child: Text(
-                    'Growth\nCompanion',
-                    textAlign: TextAlign.center,
-                    style: AppTypography.h1Playfair.copyWith(
-                      fontSize: 36,
-                      color: AppColors.grey900,
-                      height: 1.1,
-                    ),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 96,
+                        height: 96,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primary.withValues(alpha: 0.15),
+                              blurRadius: 24,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                          image: const DecorationImage(
+                            image: AssetImage('assets/images/app-icon.webp'),
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Clooo',
+                        textAlign: TextAlign.center,
+                        style: AppTypography.h1Playfair.copyWith(
+                          fontSize: 40,
+                          color: AppColors.grey900,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -1.0,
+                          height: 1.1,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 8),
                 EntranceFadeSlide(
-                  delayMs: 50,
+                  delayMs: 200,
                   child: Text(
-                    _isLogin ? 'Welcome back' : 'Begin your journey',
-                    style: const TextStyle(
+                    'Books are better together.',
+                    style: AppTypography.bodyInter.copyWith(
                       fontSize: 16,
                       color: AppColors.grey500,
+                      fontWeight: FontWeight.w400,
+                      letterSpacing: 0.2,
                     ),
                   ),
                 ),
                 const SizedBox(height: 48),
                 EntranceFadeSlide(
-                  delayMs: 100,
+                  key: ValueKey('auth-form-$_isLogin'),
+                  delayMs: 400,
                   child: Container(
                   decoration: BoxDecoration(
                     color: AppColors.white,
@@ -140,12 +190,41 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         const SizedBox(height: 16),
                         TextField(
                           controller: _passwordController,
-                          obscureText: true,
-                          decoration: const InputDecoration(
+                          obscureText: _obscurePassword,
+                          decoration: InputDecoration(
                             labelText: 'Password',
-                            prefixIcon: Icon(Icons.lock_outlined, size: 20),
+                            prefixIcon: const Icon(Icons.lock_outlined, size: 20),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                size: 20,
+                              ),
+                              onPressed: () {
+                                setState(() => _obscurePassword = !_obscurePassword);
+                              },
+                            ),
                           ),
                         ),
+                        if (!_isLogin) ...[
+                          const SizedBox(height: 16),
+                          TextField(
+                            controller: _confirmPasswordController,
+                            obscureText: _obscureConfirmPassword,
+                            decoration: InputDecoration(
+                              labelText: 'Confirm Password',
+                              prefixIcon: const Icon(Icons.lock_outlined, size: 20),
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                  size: 20,
+                                ),
+                                onPressed: () {
+                                  setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 24),
                         SizedBox(
                           width: double.infinity,
@@ -189,22 +268,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
               ),
               const SizedBox(height: 24),
-                PressScale(
-                  haptic: false,
-                  onTap: _isLoading
-                      ? null
-                      : () {
-                          HapticUtils.selection();
-                          setState(() => _isLogin = !_isLogin);
-                        },
-                  child: Text(
-                    _isLogin
-                        ? "Don't have an account? Sign Up"
-                        : 'Already have an account? Login',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w500,
+                EntranceFadeSlide(
+                  delayMs: 600,
+                  child: PressScale(
+                    haptic: false,
+                    onTap: _isLoading
+                        ? null
+                        : () {
+                            HapticUtils.light();
+                            setState(() => _isLogin = !_isLogin);
+                          },
+                    child: Text(
+                      _isLogin
+                          ? "Don't have an account? Sign Up"
+                          : 'Already have an account? Login',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
                 ),

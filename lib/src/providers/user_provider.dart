@@ -43,15 +43,9 @@ class UserStateNotifier extends StateNotifier<AsyncValue<User>> {
     state = await AsyncValue.guard(() async {
       final user = await _repository.getUserProfile();
       final now = DateTime.now();
-      final lastActive = user.lastDropDate;
-
-      // ponytail: 24h wall-clock expiration; timezone-safe strict comparison
-      if (lastActive != null && now.difference(lastActive).inHours > 24) {
-        return _repository.updateStreak(0,
-            DateTime(now.year, now.month, now.day).toIso8601String().split('T')[0]);
-      }
-
       final todayDate = DateTime(now.year, now.month, now.day);
+      
+      final lastActive = user.lastDropDate;
       final lastActiveDate = lastActive != null
           ? DateTime(lastActive.year, lastActive.month, lastActive.day)
           : null;
@@ -60,13 +54,14 @@ class UserStateNotifier extends StateNotifier<AsyncValue<User>> {
         return user.copyWith(currentStreak: user.currentStreak);
       }
 
-      final diff = lastActiveDate != null
-          ? todayDate.difference(lastActiveDate).inDays
-          : 999;
-
-      final newStreak = diff == 1 ? user.currentStreak + 1 : 1;
-      return _repository.updateStreak(newStreak,
-          todayDate.toIso8601String().split('T')[0]);
+      final yesterdayDate = todayDate.subtract(const Duration(days: 1));
+      
+      if (lastActiveDate == yesterdayDate) {
+        final newStreak = user.currentStreak + 1;
+        return _repository.updateStreak(newStreak, todayDate.toIso8601String().split('T')[0]);
+      } else {
+        return _repository.updateStreak(1, todayDate.toIso8601String().split('T')[0]);
+      }
     });
   }
 

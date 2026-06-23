@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:lottie/lottie.dart';
 import '../../../core/app_colors.dart';
 import '../../../core/app_gradients.dart';
 import '../../../core/app_typography.dart';
 import '../../../core/animated_widgets.dart';
 import '../../../domain/models/growth_drop.dart';
 import '../../../providers/social_provider.dart';
+import '../../social/social_utils.dart';
 
 class SocialDropsCard extends ConsumerStatefulWidget {
   const SocialDropsCard({super.key});
@@ -18,61 +20,7 @@ class SocialDropsCard extends ConsumerStatefulWidget {
 }
 
 class _SocialDropsCardState extends ConsumerState<SocialDropsCard> {
-  Future<void> _openDrop(dynamic drop) async {
-    if (drop.bookData != null) {
-      ref.read(socialProvider.notifier).markDropOpened(drop.id);
-      if (context.mounted) context.push('/book', extra: drop.bookData);
-      return;
-    }
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        contentPadding: const EdgeInsets.all(32),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('\u{1F4E6}', style: TextStyle(fontSize: 48)),
-            const SizedBox(height: 24),
-            const CircularProgressIndicator(color: AppColors.primary),
-            const SizedBox(height: 24),
-            Text('Unpacking drop from ${drop.senderProfile?.name ?? 'a friend'}...',
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
-          ],
-        ),
-      ),
-    );
-
-    try {
-      final bookData = await ref.read(socialProvider.notifier).openBlindBox(drop.id);
-      if (mounted) {
-        Navigator.of(context, rootNavigator: true).pop();
-
-        final parsedLessons = (bookData['lessons'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [];
-
-        context.push('/book', extra: GrowthDrop.fromJson({
-          'id': drop.id,
-          'date': drop.dropDate.toIso8601String(),
-          'focusArea': 'Social Drop',
-          'bookTitle': bookData['bookTitle'] ?? '',
-          'bookAuthor': bookData['bookAuthor'] ?? '',
-          'whatItsAbout': bookData['whatItsAbout'] ?? '',
-          'lessons': parsedLessons,
-          'summary': bookData['summary'] ?? '',
-          'coverUrl': bookData['coverUrl'] as String?,
-          'isRead': true,
-          'giftedBy': drop.senderProfile?.name,
-        }));
-      }
-    } catch (e) {
-      if (mounted) {
-        Navigator.of(context, rootNavigator: true).pop();
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -130,7 +78,7 @@ class _SocialDropsCardState extends ConsumerState<SocialDropsCard> {
                   child: _FriendGiftCard(
                     drop: drops[i],
                     colorIndex: i % 4,
-                    onTap: () => _openDrop(drops[i]),
+                    onTap: () => SocialUtils.openDrop(context, ref, drops[i]),
                   ),
                 ),
               ),

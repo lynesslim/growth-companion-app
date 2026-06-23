@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:confetti/confetti.dart';
+import 'package:lottie/lottie.dart';
 import '../../core/app_colors.dart';
 
 class InviteLandingScreen extends StatefulWidget {
@@ -81,7 +82,7 @@ class _InviteLandingScreenState extends State<InviteLandingScreen> {
                       child: AnimatedScale(
                         scale: _unpacking ? 1.1 : 1.0,
                         duration: const Duration(milliseconds: 400),
-                        child: const Text('\u{1F4E6}', style: TextStyle(fontSize: 80)),
+                        child: Lottie.asset('assets/images/wrapped-gift.json', width: 200, height: 200, repeat: true),
                       ),
                     ),
                   ),

@@ -6,6 +6,8 @@ import '../domain/models/social_streak.dart';
 import '../domain/models/user.dart' as app_user;
 import 'journal_provider.dart';
 import 'growth_drop_provider.dart';
+import 'auth_provider.dart';
+import 'user_provider.dart';
 
 final socialProvider = AsyncNotifierProvider<SocialNotifier, SocialState>(() {
   return SocialNotifier();
@@ -40,6 +42,11 @@ class SocialNotifier extends AsyncNotifier<SocialState> {
 
   @override
   Future<SocialState> build() async {
+    ref.watch(authStateProvider);
+    return _fetch();
+  }
+
+  Future<SocialState> _fetch() async {
     return _fetchData();
   }
 
@@ -457,7 +464,7 @@ class SocialNotifier extends AsyncNotifier<SocialState> {
         'is_saved': true,
       });
       ref.invalidate(journalProvider);
-      ref.invalidate(readBooksCountProvider);
+      ref.invalidate(userProvider);
     } catch (e) {
       rethrow;
     }

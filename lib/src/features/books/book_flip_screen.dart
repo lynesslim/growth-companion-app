@@ -355,7 +355,7 @@ class _CaseStudyPage extends StatelessWidget {
               thumbVisibility: true,
               child: SingleChildScrollView(
                 child: Text(
-                  book.caseStudy ?? '',
+                  _cleanAiText(book.caseStudy ?? ''),
                   style: const TextStyle(
                     fontSize: 15,
                     height: 1.7,
@@ -369,6 +369,18 @@ class _CaseStudyPage extends StatelessWidget {
       ),
     );
   }
+}
+
+String _cleanAiText(String text) {
+  var lines = text.split('\n');
+  for (var i = 0; i < lines.length; i++) {
+    lines[i] = lines[i].replaceAll(RegExp(r'^\[?Paragraph \d+:\s*'), '');
+    lines[i] = lines[i].replaceAll(RegExp(r'^Insight \d+:\s*'), '');
+    if (lines[i].endsWith(']')) {
+      lines[i] = lines[i].substring(0, lines[i].length - 1);
+    }
+  }
+  return lines.join('\n');
 }
 
 class _ActionableInsightsPage extends StatelessWidget {
@@ -455,11 +467,11 @@ class _ActionableInsightsPage extends StatelessWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        insights[index],
+                        _cleanAiText(insights[index]),
                         style: const TextStyle(
-                          fontSize: 14,
-                          height: 1.6,
-                          color: AppColors.grey600,
+                          fontSize: 15,
+                          height: 1.5,
+                          color: AppColors.grey700,
                         ),
                       ),
                     ),

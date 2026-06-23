@@ -1,33 +1,23 @@
-# Implementation Plan: Case Study and Actionable Insights Screens
+Please implement the following logic fixes regarding the personal streak calculation:
 
-We need to add two new screens to the book reading experience (book flip screen): a "Case Study" screen and an "Actionable Insights" screen. These screens should appear immediately after the three lessons and before the final summary.
+### 1. Fix the `updateStreak` Logic in UserProvider
+We will completely rewrite `updateStreak` inside `lib/src/providers/user_provider.dart` to strictly use calendar days, removing the broken 24-hour wall-clock rule.
 
-Please implement the following changes:
+**Logic:**
+- Compare `DateTime.now()` (current calendar day) against the user's `lastDropDate` (converted to a calendar day).
+- If `lastDropDate == today`, keep streak the same (already completed today).
+- If `lastDropDate == yesterday`, increment streak by `+1`.
+- If `lastDropDate < yesterday` (or null), reset streak to `1`.
 
-## 1. Update Domain Models
-The backend AI generation prompts have already been updated in Supabase to include `caseStudy` (String) and `actionableInsights` (List of Strings) in the JSON payload. 
+- Rewrite `updateStreak()` to use pure calendar-day `DateTime(year, month, day)` comparisons.
+- Remove the `now.difference(lastActive).inHours > 24` rule entirely.
 
-**`lib/src/domain/models/growth_drop.dart`**
-- Add `final String? caseStudy;` and `final List<String>? actionableInsights;`.
-- Update the constructor, `copyWith`, `toJson`, and `fromJson` methods to support these new fields safely.
+### 2. Move the Streak Trigger to `markAsRead`
+Currently, the streak and XP are awarded in `saveToJournal`. This will be moved so that simply finishing the book triggers the rewards.
 
-**`lib/src/domain/models/social_drop.dart`**
-- In `SocialDrop.fromJson`, extract `caseStudy` and `actionableInsights` from the nested `book_data` JSON.
-
-## 2. Update Data Providers & Serialization
-**`lib/src/providers/social_provider.dart`**
-- In `saveDropToJournal`, update the manual `bookData` map to include `caseStudy` and `actionableInsights` when inserting the drop into the journal table.
-
-**`lib/src/features/books/streak_complete_screen.dart`**
-- In `_saveToJournal`, update the manual `recommended_books` map to include `caseStudy` and `actionableInsights`.
-- In `_showFriendPicker`, update the manual mapping inside `sendBookFromJournal` to include the new fields.
-
-## 3. Update the UI (`lib/src/features/books/book_flip_screen.dart`)
-- **Dynamic Page List**: Change the static `_pageNames` list to a dynamic getter (e.g., `_getPageNames(GrowthDrop book)`) that only includes `'Case Study'` and `'Insights'` if `book.caseStudy != null` and `book.actionableInsights != null`. This ensures backwards compatibility for older books.
-- **Update Page Progress Indicator**: Ensure the page progress dot indicator and `[current]/[total]` text dynamically use the length of the new dynamic page list instead of the old static `_pageNames.length`. Be careful with the syntax inside the `children` list.
-- **Update `_nextPage` and Navigation**: Ensure the `_nextPage` logic and the "Next / Finish" button logic accurately check against the new dynamic page list length.
-- **Update `_buildPageContent`**: Refactor the switch statement into a string-based check against the dynamic page names to render the correct pages.
-- **Create `_CaseStudyPage` Widget**: Build a visually distinct page for the case study using `AppColors.xpKnowledge` or `AppColors.primary`. Display the case study text in a scrollable view. Use a psychology or lightbulb icon.
-- **Create `_ActionableInsightsPage` Widget**: Build a visually distinct page for the actionable insights using `AppColors.warning` or `AppColors.xpInfluence`. Display the 3 insights as beautiful, separated cards with numbered circular badges. Use a bolt or action icon.
-
-Please proceed to make these modifications across the codebase!
+- Inside `lib/src/providers/growth_drop_provider.dart`:
+- Remove `await ref.read(userProvider.notifier).updateStreak();` and `updateXp(15)` from `saveToJournal`.
+- Add them into `markAsRead(GrowthDrop currentDrop)`.
+- **Validation:** Before awarding the streak/XP in `markAsRead`, we will strictly verify that `currentDrop` is *actually* today's drop:
+  - Verify `currentDrop.date` matches today's calendar date (`DateTime(now.year, now.month, now.day)`).
+  - Verify `currentDrop.focusArea != 'Social Drop'` (meaning it is a personal daily drop, not a friend's drop).

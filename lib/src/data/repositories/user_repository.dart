@@ -11,7 +11,29 @@ class UserRepository {
         .select()
         .eq('id', _userId)
         .maybeSingle();
-    if (data != null) return User.fromJson(data);
+        
+    if (data != null) {
+      final booksCountResponse = await supa.Supabase.instance.client
+          .from('growth_drops')
+          .select('id')
+          .eq('user_id', _userId)
+          .eq('is_read', true);
+          
+      data['books_read'] = (booksCountResponse as List).length;
+      final user = User.fromJson(data);
+      
+      // If the streak is dead (more than 1 calendar day ago), report it as 0 to the UI.
+      if (user.lastDropDate != null) {
+        final now = DateTime.now();
+        final today = DateTime(now.year, now.month, now.day);
+        final last = DateTime(user.lastDropDate!.year, user.lastDropDate!.month, user.lastDropDate!.day);
+        
+        if (today.difference(last).inDays > 1) {
+          return user.copyWith(currentStreak: 0);
+        }
+      }
+      return user;
+    }
     throw Exception('Profile not found');
   }
 

@@ -3,10 +3,15 @@ import 'package:supabase_flutter/supabase_flutter.dart' as supa;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../domain/models/growth_drop.dart';
 import 'journal_provider.dart';
+import 'auth_provider.dart';
+import 'user_provider.dart';
 
 class GrowthDropNotifier extends AsyncNotifier<GrowthDrop?> {
   @override
-  Future<GrowthDrop?> build() async => _fetch();
+  Future<GrowthDrop?> build() async {
+    ref.watch(authStateProvider);
+    return _fetch();
+  }
 
   Future<GrowthDrop?> _fetch() async {
     final userId = supa.Supabase.instance.client.auth.currentUser?.id ?? '';
@@ -36,10 +41,18 @@ class GrowthDropNotifier extends AsyncNotifier<GrowthDrop?> {
     if (drop != null && drop.id == currentDrop.id) {
       state = AsyncValue.data(drop.copyWith(isRead: true));
     } else {
-      // If state was null (e.g. from race condition), populate it
       state = AsyncValue.data(currentDrop.copyWith(isRead: true));
     }
-    ref.invalidate(readBooksCountProvider);
+    
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final dropDate = DateTime(currentDrop.date.year, currentDrop.date.month, currentDrop.date.day);
+    if (dropDate == today && currentDrop.focusArea != 'Social Drop') {
+      await ref.read(userProvider.notifier).updateStreak();
+      await ref.read(userProvider.notifier).updateXp(15);
+    }
+    
+    ref.invalidate(userProvider);
   }
 
   Future<void> saveToJournal(GrowthDrop currentDrop) async {
@@ -113,13 +126,3 @@ GrowthDrop fromSupabase(Map<String, dynamic> json) {
   );
 }
 
-final readBooksCountProvider = FutureProvider<int>((ref) async {
-  final userId = supa.Supabase.instance.client.auth.currentUser?.id ?? '';
-  if (userId.isEmpty) return 0;
-  final response = await supa.Supabase.instance.client
-      .from('growth_drops')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('is_read', true);
-  return (response as List).length;
-});

@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supa;
 import '../../core/app_colors.dart';
 import '../../core/animated_widgets.dart';
+import '../../providers/user_provider.dart';
+import '../../providers/social_provider.dart';
+import '../../providers/journal_provider.dart';
+import '../../providers/growth_drop_provider.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Settings'),
@@ -22,6 +27,10 @@ class SettingsScreen extends StatelessWidget {
           children: [
             PressScale(
               onTap: () async {
+                ref.invalidate(userProvider);
+                ref.invalidate(socialProvider);
+                ref.invalidate(journalProvider);
+                ref.invalidate(growthDropProvider);
                 await supa.Supabase.instance.client.auth.signOut();
                 if (context.mounted) context.go('/login');
               },

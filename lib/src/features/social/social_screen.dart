@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lottie/lottie.dart';
 
 import 'package:share_plus/share_plus.dart';
 import '../../core/app_colors.dart';
@@ -267,7 +268,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('\u{1F4E6}', style: TextStyle(fontSize: 48)),
+            Lottie.asset('assets/images/wrapped-gift.json', width: 120, height: 120, repeat: true),
             const SizedBox(height: 24),
             const CircularProgressIndicator(color: AppColors.primary),
             const SizedBox(height: 24),

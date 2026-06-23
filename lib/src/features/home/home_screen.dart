@@ -239,8 +239,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final dropState = ref.watch(growthDropProvider);
     final socialState = ref.watch(socialProvider);
     final drop = dropState.valueOrNull;
+    final user = ref.watch(userProvider).valueOrNull;
 
-    if (!_modalShown && !dropState.isLoading) {
+    if (!_modalShown && !dropState.isLoading && user != null) {
       if (drop == null) {
         _modalShown = true;
         WidgetsBinding.instance.addPostFrameCallback((_) => _showGenerateModal(context));

@@ -13,6 +13,7 @@ import '../../domain/models/friend.dart';
 import '../../domain/models/social_streak.dart';
 import '../../providers/social_provider.dart';
 import '../../providers/user_provider.dart';
+import 'social_utils.dart';
 import '../../providers/journal_provider.dart';
 import '../../domain/models/growth_drop.dart';
 import '../../shared/widgets/avatar_ring.dart';
@@ -85,61 +86,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
     }
   }
 
-  Future<void> _openDrop(dynamic drop) async {
-    if (drop.bookData != null) {
-      ref.read(socialProvider.notifier).markDropOpened(drop.id);
-      if (context.mounted) context.push('/book', extra: drop.bookData);
-      return;
-    }
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        contentPadding: const EdgeInsets.all(32),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('📦', style: TextStyle(fontSize: 48, fontFamily: 'Apple Color Emoji')),
-            const SizedBox(height: 24),
-            const CircularProgressIndicator(color: AppColors.primary),
-            const SizedBox(height: 24),
-            Text('Unpacking drop from ${drop.senderProfile?.name ?? 'a friend'}...',
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
-          ],
-        ),
-      ),
-    );
-
-    try {
-      final bookData = await ref.read(socialProvider.notifier).openBlindBox(drop.id);
-      if (mounted) {
-        Navigator.of(context, rootNavigator: true).pop();
-
-        final parsedLessons = (bookData['lessons'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [];
-
-        context.push('/book', extra: GrowthDrop.fromJson({
-          'id': drop.id,
-          'date': drop.dropDate.toIso8601String(),
-          'focusArea': 'Social Drop',
-          'bookTitle': bookData['bookTitle'] ?? '',
-          'bookAuthor': bookData['bookAuthor'] ?? '',
-          'whatItsAbout': bookData['whatItsAbout'] ?? '',
-          'lessons': parsedLessons,
-          'summary': bookData['summary'] ?? '',
-          'coverUrl': bookData['coverUrl'] as String?,
-          'isRead': true,
-          'giftedBy': drop.senderProfile?.name,
-        }));
-      }
-    } catch (e) {
-      if (mounted) {
-        Navigator.of(context, rootNavigator: true).pop();
-      }
-    }
-  }
 
   Widget _buildSearchResult(dynamic user, String? currentUserId) {
     final isSelf = user.id == currentUserId;
@@ -286,7 +233,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
             onSearchChanged: _onSearchChanged,
             onShareInvite: () => _shareInvite(userId),
             onSendDrop: (f) => showSendDropDialog(context, ref, f),
-            onOpenDrop: _openDrop,
+            onOpenDrop: (drop) => SocialUtils.openDrop(context, ref, drop),
             searchResultWidgets: searchResultWidgets,
             pendingRequestWidgets: pendingRequestWidgets,
           );

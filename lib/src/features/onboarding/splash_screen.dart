@@ -131,7 +131,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 60), // Push down slightly from top
+                    SizedBox(height: MediaQuery.of(context).size.height * 0.15), // Push down by 15% of screen height
                     // App Icon
                     Container(
                       width: 120,

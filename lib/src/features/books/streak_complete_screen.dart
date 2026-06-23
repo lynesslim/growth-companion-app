@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
+import 'package:lottie/lottie.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -56,27 +57,9 @@ class _StreakCompleteScreenState extends ConsumerState<StreakCompleteScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      gradient: isSocialDrop
-                          ? const LinearGradient(
-                              colors: [AppColors.primary, AppColors.pinkLight],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            )
-                          : const LinearGradient(
-                              colors: [AppColors.xpInfluence, AppColors.warning],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                      borderRadius: BorderRadius.circular(28),
-                    ),
-                    child: Icon(
-                      isSocialDrop ? Icons.card_giftcard : Icons.local_fire_department_rounded,
-                      color: AppColors.white, size: 48),
-                  ),
+                  isSocialDrop
+                      ? Lottie.asset('assets/images/wrapped-gift.json', width: 150, height: 150, repeat: true)
+                      : Lottie.asset('assets/images/fire.json', width: 120, height: 120, repeat: true),
                   const SizedBox(height: 32),
                   Text(
                     isSocialDrop
@@ -139,7 +122,7 @@ class _StreakCompleteScreenState extends ConsumerState<StreakCompleteScreen> {
                   child: GestureDetector(
                     onTap: _isSaved ? null : () => _saveToJournal(context, widget.book!),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      padding: const EdgeInsets.symmetric(vertical: 18),
                       decoration: BoxDecoration(
                         color: _isSaved ? AppColors.grey200 : AppColors.primary.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(12),
@@ -159,7 +142,7 @@ class _StreakCompleteScreenState extends ConsumerState<StreakCompleteScreen> {
                           Text(
                             _isSaved ? 'Saved to Journal' : 'Save to my Journal',
                             style: TextStyle(
-                              fontSize: 14,
+                              fontSize: 16,
                               fontWeight: FontWeight.w600,
                               color: _isSaved ? AppColors.grey500 : AppColors.primary,
                             ),
@@ -267,7 +250,7 @@ class _StreakCompleteScreenState extends ConsumerState<StreakCompleteScreen> {
       });
       
       ref.invalidate(journalProvider);
-      ref.invalidate(readBooksCountProvider);
+      ref.invalidate(userProvider);
 
       if (mounted) {
         setState(() => _isSaved = true);

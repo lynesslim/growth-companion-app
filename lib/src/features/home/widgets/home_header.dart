@@ -5,7 +5,6 @@ import '../../../core/app_colors.dart';
 import '../../../core/app_gradients.dart';
 import '../../../core/animated_widgets.dart';
 import '../../../providers/user_provider.dart';
-import '../../../providers/growth_drop_provider.dart';
 
 class HomeHeader extends ConsumerWidget {
   const HomeHeader({super.key});
@@ -18,8 +17,7 @@ class HomeHeader extends ConsumerWidget {
     final xp = userAsync.valueOrNull?.currentXp ?? 0;
     final level = userAsync.valueOrNull?.level ?? 1;
 
-    final booksCountAsync = ref.watch(readBooksCountProvider);
-    final booksCount = booksCountAsync.valueOrNull ?? 0;
+    final booksCount = userAsync.valueOrNull?.booksRead ?? 0;
 
     final hour = DateTime.now().hour;
     final greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';

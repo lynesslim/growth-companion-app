@@ -49,9 +49,13 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       final isAuthenticated = authState.valueOrNull != null;
       final isLoginRoute = state.matchedLocation == '/login';
       
-      if (!isAuthenticated && !isLoginRoute && state.matchedLocation != '/invite' && state.matchedLocation != '/pre-onboarding') {
-        if (!PreOnboardingState.hasSeen) return '/pre-onboarding';
-        return '/login';
+      if (!isAuthenticated) {
+        if (!PreOnboardingState.hasSeen && state.matchedLocation != '/pre-onboarding' && state.matchedLocation != '/invite') {
+          return '/pre-onboarding';
+        }
+        if (PreOnboardingState.hasSeen && !isLoginRoute && state.matchedLocation != '/invite') {
+          return '/login';
+        }
       }
       
       if (isAuthenticated) {

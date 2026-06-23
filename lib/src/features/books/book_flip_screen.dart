@@ -40,7 +40,7 @@ class _BookFlipScreenState extends ConsumerState<BookFlipScreen> {
       if (book.giftedBy == null) {
         ref.read(userProvider.notifier).updateStreak();
       }
-      ref.read(growthDropProvider.notifier).markAsRead();
+      ref.read(growthDropProvider.notifier).markAsRead(book);
       context.push('/streak', extra: book);
       return;
     }
@@ -307,41 +307,52 @@ class _CoverPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    String? cleanSvg;
     if (book.coverUrl != null && book.coverUrl!.trim().isNotEmpty) {
+      cleanSvg = book.coverUrl!.trim();
+      if (cleanSvg.startsWith('```')) {
+        cleanSvg = cleanSvg.replaceFirst(RegExp(r'^```[a-zA-Z]*\n?'), '');
+        cleanSvg = cleanSvg.replaceFirst(RegExp(r'\n?```$'), '');
+      }
+    }
+
+    Widget backgroundWidget;
+    if (cleanSvg != null && cleanSvg.startsWith('http')) {
+      backgroundWidget = cleanSvg.endsWith('.svg') 
+          ? SvgPicture.network(cleanSvg, fit: BoxFit.cover)
+          : Image.network(cleanSvg, fit: BoxFit.cover);
+    } else if (cleanSvg != null && cleanSvg.contains('<svg')) {
       try {
-        return Container(
+        backgroundWidget = SvgPicture.string(
+          cleanSvg,
           width: double.infinity,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(28),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.3),
-                blurRadius: 32,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(28),
-            child: SvgPicture.string(
-              book.coverUrl!,
-              width: double.infinity,
-              height: double.infinity,
-              fit: BoxFit.cover,
-            ),
+          height: double.infinity,
+          fit: BoxFit.cover,
+        );
+      } catch (e) {
+        backgroundWidget = Container(
+          color: Colors.red.shade100,
+          padding: const EdgeInsets.all(16),
+          child: SingleChildScrollView(
+            child: Text("SVG PARSE ERROR: $e\n\nRAW STRING:\n$cleanSvg"),
           ),
         );
-      } catch (_) {}
+      }
+    } else {
+      backgroundWidget = Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [AppColors.primary, AppColors.pinkLight],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+      );
     }
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.primary, AppColors.pinkLight],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
@@ -351,48 +362,62 @@ class _CoverPage extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: AppColors.white.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(16),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(28),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Background
+            backgroundWidget,
+            // Text Overlay
+            Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: AppColors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Icon(Icons.menu_book_rounded,
+                        color: AppColors.white, size: 28),
+                  ),
+                  const SizedBox(height: 32),
+                  Text(
+                    book.focusArea,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppColors.white.withValues(alpha: 0.8),
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    book.bookTitle,
+                    style: AppTypography.h1Playfair.copyWith(
+                      fontSize: 34,
+                      color: AppColors.white,
+                      height: 1.1,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    book.bookAuthor,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: AppColors.white.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            child: const Icon(Icons.menu_book_rounded,
-                color: AppColors.white, size: 28),
-          ),
-          const SizedBox(height: 32),
-          Text(
-            book.focusArea,
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.white.withValues(alpha: 0.8),
-              fontWeight: FontWeight.w500,
-              letterSpacing: 1,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            book.bookTitle,
-          style: AppTypography.h1Playfair.copyWith(
-            fontSize: 34,
-            color: AppColors.white,
-            height: 1.1,
-          ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            book.bookAuthor,
-            style: TextStyle(
-              fontSize: 16,
-              color: AppColors.white.withValues(alpha: 0.7),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

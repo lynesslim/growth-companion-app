@@ -290,17 +290,29 @@ class SocialNotifier extends AsyncNotifier<SocialState> {
         return; // already sent today, no double-count
       }
 
-      final updatePayload = <String, dynamic>{};
+      final todayDate = DateTime.parse(today);
+      final yesterdayDate = todayDate.subtract(const Duration(days: 1));
+
+      final myStreakValid = myLastDate != null && !DateTime.parse(myLastDate as String).isBefore(yesterdayDate);
+      final otherStreakValid = otherDate != null && !DateTime.parse(otherDate as String).isBefore(yesterdayDate);
+
+      int newStreak = streakData['current_streak'] as int? ?? 0;
+
+      if (!myStreakValid || !otherStreakValid) {
+        newStreak = 0;
+      }
+
+      if (otherDate == today) {
+        newStreak += 1;
+      }
+
+      final updatePayload = <String, dynamic>{
+        'current_streak': newStreak,
+      };
       if (isUser1) {
         updatePayload['last_shared_date_1'] = today;
-        if (otherDate == today) {
-          updatePayload['current_streak'] = (streakData['current_streak'] as int? ?? 0) + 1;
-        }
       } else {
         updatePayload['last_shared_date_2'] = today;
-        if (otherDate == today) {
-          updatePayload['current_streak'] = (streakData['current_streak'] as int? ?? 0) + 1;
-        }
       }
       await _supabase.from('social_streaks').update(updatePayload).eq('id', streakData['id']);
     } else {

@@ -151,8 +151,8 @@ class _FriendsBody extends StatelessWidget {
         (s) => (s.userId1 == userId && s.userId2 == fid) || (s.userId1 == fid && s.userId2 == userId),
         orElse: () => SocialStreak(id: '', userId1: userId!, userId2: fid, currentStreak: 0),
       );
-      if (s.currentStreak > bestStreak) {
-        bestStreak = s.currentStreak;
+      if (s.effectiveStreak > bestStreak) {
+        bestStreak = s.effectiveStreak;
         best = f;
       }
     }
@@ -166,7 +166,7 @@ class _FriendsBody extends StatelessWidget {
       (s) => (s.userId1 == userId && s.userId2 == fid) || (s.userId1 == fid && s.userId2 == userId),
       orElse: () => SocialStreak(id: '', userId1: userId!, userId2: fid, currentStreak: 0),
     );
-    return s.currentStreak;
+    return s.effectiveStreak;
   }
 
   @override
@@ -336,7 +336,7 @@ class _ClosestStreaksSection extends StatelessWidget {
       (s) => (s.userId1 == userId && s.userId2 == fid) || (s.userId1 == fid && s.userId2 == userId),
       orElse: () => SocialStreak(id: '', userId1: userId!, userId2: fid, currentStreak: 0),
     );
-    return s.currentStreak;
+    return s.effectiveStreak;
   }
 
   @override
@@ -615,7 +615,7 @@ class _AllFriendsSection extends StatelessWidget {
       (s) => (s.userId1 == userId && s.userId2 == fid) || (s.userId1 == fid && s.userId2 == userId),
       orElse: () => SocialStreak(id: '', userId1: userId!, userId2: fid, currentStreak: 0),
     );
-    return s.currentStreak;
+    return s.effectiveStreak;
   }
 
   @override

@@ -311,7 +311,11 @@ class _GrowthDropCardState extends ConsumerState<GrowthDropCard>
                               offset: Offset(0, -4 * _ctrl.value),
                               child: child,
                             ),
-                            child: _BookCover(coverUrl: drop.valueOrNull?.coverUrl),
+                            child: _BookCover(
+                              coverUrl: drop.valueOrNull?.coverUrl,
+                              bookTitle: drop.valueOrNull?.bookTitle,
+                              bookAuthor: drop.valueOrNull?.bookAuthor,
+                            ),
                           ),
                         ),
                       ],
@@ -431,44 +435,59 @@ class _CtaButtonState extends State<_CtaButton>
 
 class _BookCover extends StatelessWidget {
   final String? coverUrl;
-  const _BookCover({this.coverUrl});
+  final String? bookTitle;
+  final String? bookAuthor;
+  const _BookCover({this.coverUrl, this.bookTitle, this.bookAuthor});
 
   @override
   Widget build(BuildContext context) {
+    String? cleanSvg;
     if (coverUrl != null && coverUrl!.trim().isNotEmpty) {
+      cleanSvg = coverUrl!.trim();
+      // Remove markdown code block wrappers if they exist
+      if (cleanSvg.startsWith('```')) {
+        cleanSvg = cleanSvg.replaceFirst(RegExp(r'^```[a-zA-Z]*\n?'), '');
+        cleanSvg = cleanSvg.replaceFirst(RegExp(r'\n?```$'), '');
+      }
+    }
+
+    Widget backgroundWidget;
+    if (cleanSvg != null && cleanSvg.startsWith('http')) {
+      backgroundWidget = cleanSvg.endsWith('.svg') 
+          ? SvgPicture.network(cleanSvg, fit: BoxFit.cover)
+          : Image.network(cleanSvg, fit: BoxFit.cover);
+    } else if (cleanSvg != null && cleanSvg.contains('<svg')) {
       try {
-        return Container(
+        backgroundWidget = SvgPicture.string(
+          cleanSvg,
           width: 125,
           height: 180,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.22),
-                blurRadius: 12,
-                offset: const Offset(4, 8),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: SvgPicture.string(
-              coverUrl!,
-              width: 125,
-              height: 180,
-              fit: BoxFit.cover,
+          fit: BoxFit.cover,
+        );
+      } catch (e) {
+        backgroundWidget = Container(
+          color: Colors.red.shade100,
+          padding: const EdgeInsets.all(8),
+          child: SingleChildScrollView(
+            child: Text(
+              "ERR: $e\n\n$cleanSvg",
+              style: const TextStyle(fontSize: 8, color: Colors.red),
             ),
           ),
         );
-      } catch (_) {
-        // ponytail: SVG parse failed – fall through to gradient fallback
       }
+    } else {
+      backgroundWidget = Container(
+        decoration: BoxDecoration(
+          gradient: AppGradients.cardBgGradient,
+        ),
+      );
     }
+
     return Container(
       width: 125,
       height: 180,
       decoration: BoxDecoration(
-        gradient: AppGradients.cardBgGradient,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -478,42 +497,55 @@ class _BookCover extends StatelessWidget {
           ),
         ],
       ),
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 24,
-            height: 24,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(6),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Background Layer
+            backgroundWidget,
+            // Text Overlay
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Icon(Icons.menu_book_rounded, color: AppColors.goldAccent, size: 12),
+                  ),
+                  const Spacer(),
+                  Text(
+                    bookTitle ?? 'Your Drop',
+                    maxLines: 4,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.playfairDisplay(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                      height: 1.25,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    bookAuthor ?? 'Growth Guide',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 9,
+                      color: Colors.white70,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            child: const Icon(Icons.menu_book_rounded, color: AppColors.goldAccent, size: 12),
-          ),
-          const Spacer(),
-          Text(
-            'Your Drop',
-            maxLines: 4,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.playfairDisplay(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-              height: 1.25,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Growth Guide',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 9,
-              color: Colors.white70,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

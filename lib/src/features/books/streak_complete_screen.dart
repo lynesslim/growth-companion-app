@@ -231,7 +231,7 @@ class _StreakCompleteScreenState extends ConsumerState<StreakCompleteScreen> {
   Future<void> _saveToJournal(BuildContext context, GrowthDrop book) async {
     if (book.giftedBy == null) {
       // daily drop — just flip is_saved on the existing row
-      await ref.read(growthDropProvider.notifier).saveToJournal();
+      await ref.read(growthDropProvider.notifier).saveToJournal(book);
       if (mounted) {
         setState(() => _isSaved = true);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -277,8 +277,9 @@ class _StreakCompleteScreenState extends ConsumerState<StreakCompleteScreen> {
 
   void _inviteViaWhatsApp(BuildContext context, WidgetRef ref, GrowthDrop bookData) {
     final userId = ref.read(userProvider).valueOrNull?.id;
-    final inviteLink = userId != null ? ' Join me here: ${Uri.base.origin}/#/invite?sender=$userId&drop_id=${bookData.id}' : '';
-    final shareText = 'Look what I\'m learning on Growth Companion: $inviteLink';
+    final inviteLink = userId != null ? '${Uri.base.origin}/#/invite?sender=$userId&drop_id=${bookData.id}' : '';
+    final authorText = bookData.bookAuthor != null ? ' by ${bookData.bookAuthor}' : '';
+    final shareText = 'I just read "${bookData.bookTitle}"$authorText and it was amazing! Try the app and let\'s share books daily. Join me here: $inviteLink\n\nRead more books & stay consistent with friends today!';
     
     try {
       Share.share(shareText);

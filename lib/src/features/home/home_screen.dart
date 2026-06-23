@@ -14,6 +14,8 @@ import '../../providers/user_provider.dart';
 import '../../shared/widgets/avatar_ring.dart';
 import '../../domain/models/friend.dart';
 import '../../domain/models/social_streak.dart';
+import '../../domain/models/growth_drop.dart';
+import '../social/widgets/send_drop_dialog.dart';
 import 'widgets/home_header.dart';
 import 'widgets/growth_drop_card.dart';
 import 'widgets/social_drops_card.dart';
@@ -33,7 +35,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _processInvite();
-      _checkPostReadingModal();
     });
   }
 
@@ -96,11 +97,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
+  bool _isCheckingSocialModal = false;
+
   // ponytail: SharedPreferences-based daily guard; no DB needed for a check-once modal
   Future<void> _checkPostReadingModal() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (!(prefs.getBool('_pendingStreakComplete') ?? false)) return;
-    await prefs.remove('_pendingStreakComplete');
+    if (_isCheckingSocialModal) return;
+    _isCheckingSocialModal = true;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (!(prefs.getBool('_pendingStreakComplete') ?? false)) return;
+      await prefs.remove('_pendingStreakComplete');
 
     final today = DateTime.now().toIso8601String().split('T')[0];
     if (prefs.getString('_postReadingModalLastShown') == today) return;
@@ -192,6 +198,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
       ),
     );
+    } finally {
+      _isCheckingSocialModal = false;
+    }
   }
 
   @override
@@ -208,6 +217,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         _modalShown = true;
         WidgetsBinding.instance.addPostFrameCallback((_) => _showDropModal(context));
       }
+    }
+
+    if (!dropState.isLoading && drop != null && drop.isRead) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _checkPostReadingModal());
     }
 
     if (dropState.isLoading || socialState.isLoading) {
@@ -259,7 +272,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         userId: ref.watch(userProvider).valueOrNull?.id ?? '',
                         friends: socialState.valueOrNull!.acceptedFriends,
                         streaks: socialState.valueOrNull!.streaks,
-                        onTap: () => context.push('/social'),
+                        onTap: (f) => showSendDropDialog(context, ref, f),
                       ),
                     ),
                   ),
@@ -418,10 +431,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       return;
     }
     
+    // ponytail: use the root navigator to show/pop the loading dialog so that
+    // ref.invalidate rebuilding the home screen can't destroy the dialog context
+    final rootNav = Navigator.of(context, rootNavigator: true);
+    
     // Show loading modal
     showDialog(
       context: context,
       barrierDismissible: false,
+      useRootNavigator: true,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         contentPadding: const EdgeInsets.all(32),
@@ -456,24 +474,57 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         'generate-growth-drop',
         body: body,
       );
-      if (mounted) {
-        Navigator.pop(context); // close loading modal
-        ref.invalidate(growthDropProvider);
-        context.push('/book');
+      
+      // Poll directly using Supabase to avoid any Riverpod caching/invalidation race conditions
+      GrowthDrop? newDrop;
+      int retries = 0;
+      final today = DateTime.now().toIso8601String().split('T')[0];
+      
+      while (newDrop == null && retries < 6) {
+        await Future.delayed(const Duration(milliseconds: 1500));
+        final response = await Supabase.instance.client
+            .from('growth_drops')
+            .select()
+            .eq('user_id', user.id)
+            .eq('drop_date', today)
+            .order('created_at', ascending: false)
+            .limit(1);
+            
+        if (response.isNotEmpty) {
+          newDrop = fromSupabase(response.first);
+        }
+        retries++;
       }
+
+      if (!mounted) return;
+      
+      // Close loading modal via root navigator (survives home screen rebuilds)
+      rootNav.pop();
+      
+      // Navigate to book screen FIRST, before invalidating the provider.
+      // Invalidating causes a home screen rebuild that would otherwise
+      // destroy our context mid-navigation.
+      if (newDrop != null) {
+        await context.push('/book', extra: newDrop);
+      } else {
+        await context.push('/book');
+      }
+      
+      // Only now sync the provider so the home screen shows the right state
+      // when the user pops back from the book screen
+      ref.invalidate(growthDropProvider);
+      _modalShown = false;
+      if (mounted) setState(() {});
     } catch (e) {
       if (mounted) {
-        Navigator.pop(context); // close loading modal
+        rootNav.pop(); // close loading modal
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to generate: $e')),
-      );
-    }
+        );
+      }
     }
   }
-}
-
-// ponytail: standalone function since it doesn't reference state; avoids extra nesting
-void _showDropModal(BuildContext context) {
+  void _showDropModal(BuildContext context) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -515,9 +566,11 @@ void _showDropModal(BuildContext context) {
             SizedBox(
               width: double.infinity,
               child: GestureDetector(
-                onTap: () {
+                onTap: () async {
                   Navigator.pop(ctx);
-                  context.push('/book');
+                  await context.push('/book');
+                  _modalShown = false;
+                  if (mounted) setState(() {});
                 },
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 16),
@@ -555,12 +608,13 @@ void _showDropModal(BuildContext context) {
       ),
     );
   }
+}
 
 class _SendToFriendsCarousel extends StatelessWidget {
   final String userId;
   final List<Friend> friends;
   final List<SocialStreak> streaks;
-  final VoidCallback onTap;
+  final void Function(Friend) onTap;
 
   const _SendToFriendsCarousel({
     required this.userId,
@@ -575,7 +629,7 @@ class _SendToFriendsCarousel extends StatelessWidget {
       (s) => (s.userId1 == userId && s.userId2 == fid) || (s.userId1 == fid && s.userId2 == userId),
       orElse: () => SocialStreak(id: '', userId1: userId, userId2: fid, currentStreak: 0),
     );
-    return s.currentStreak;
+    return s.effectiveStreak;
   }
 
   @override
@@ -611,7 +665,7 @@ class _SendToFriendsCarousel extends StatelessWidget {
               return Padding(
                 padding: const EdgeInsets.only(right: 16),
                 child: GestureDetector(
-                  onTap: onTap,
+                  onTap: () => onTap(f),
                   child: SizedBox(
                     width: 72,
                     child: Column(

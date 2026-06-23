@@ -327,8 +327,6 @@ class _FriendGiftCardState extends State<_FriendGiftCard>
                     width: 56,
                     height: 56,
                     fit: BoxFit.contain,
-                    color: Colors.white,
-                    colorBlendMode: BlendMode.multiply,
                   ),
                 ),
               ),

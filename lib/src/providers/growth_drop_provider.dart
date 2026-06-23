@@ -23,24 +23,37 @@ class GrowthDropNotifier extends AsyncNotifier<GrowthDrop?> {
     return fromSupabase(response.first);
   }
 
-  Future<void> markAsRead() async {
-    final drop = state.valueOrNull;
-    if (drop == null || drop.isRead) return;
+  Future<void> markAsRead(GrowthDrop currentDrop) async {
+    if (currentDrop.isRead) return;
+    
     await supa.Supabase.instance.client
         .from('growth_drops')
         .update({'is_read': true})
-        .eq('id', drop.id);
-    state = AsyncValue.data(drop.copyWith(isRead: true));
+        .eq('id', currentDrop.id);
+        
+    final drop = state.valueOrNull;
+    if (drop != null && drop.id == currentDrop.id) {
+      state = AsyncValue.data(drop.copyWith(isRead: true));
+    } else {
+      // If state was null (e.g. from race condition), populate it
+      state = AsyncValue.data(currentDrop.copyWith(isRead: true));
+    }
   }
 
-  Future<void> saveToJournal() async {
-    final drop = state.valueOrNull;
-    if (drop == null || drop.isSaved) return;
+  Future<void> saveToJournal(GrowthDrop currentDrop) async {
+    if (currentDrop.isSaved) return;
+    
     await supa.Supabase.instance.client
         .from('growth_drops')
         .update({'is_saved': true})
-        .eq('id', drop.id);
-    state = AsyncValue.data(drop.copyWith(isSaved: true));
+        .eq('id', currentDrop.id);
+        
+    final drop = state.valueOrNull;
+    if (drop != null && drop.id == currentDrop.id) {
+      state = AsyncValue.data(drop.copyWith(isSaved: true));
+    } else {
+      state = AsyncValue.data(currentDrop.copyWith(isSaved: true));
+    }
   }
 }
 

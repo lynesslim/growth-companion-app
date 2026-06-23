@@ -29,4 +29,20 @@ class SocialStreak {
           : null,
     );
   }
+
+  int get effectiveStreak {
+    if (currentStreak == 0) return 0;
+    
+    final today = DateTime.now();
+    final todayDate = DateTime(today.year, today.month, today.day);
+    final yesterdayDate = todayDate.subtract(const Duration(days: 1));
+
+    final valid1 = lastSharedDate1 != null && !lastSharedDate1!.isBefore(yesterdayDate);
+    final valid2 = lastSharedDate2 != null && !lastSharedDate2!.isBefore(yesterdayDate);
+
+    if (!valid1 || !valid2) {
+      return 0; // Streak is broken
+    }
+    return currentStreak;
+  }
 }

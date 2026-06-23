@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../core/app_colors.dart';
 import '../../core/app_typography.dart';
 import '../../core/animated_widgets.dart';
@@ -109,16 +109,53 @@ class _BookCoverCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CardPress(
-      onTap: () => context.push('/book', extra: drop),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
+    String? cleanSvg;
+    if (drop.coverUrl != null && drop.coverUrl!.trim().isNotEmpty) {
+      cleanSvg = drop.coverUrl!.trim();
+      if (cleanSvg.startsWith('```')) {
+        cleanSvg = cleanSvg.replaceFirst(RegExp(r'^```[a-zA-Z]*\n?'), '');
+        cleanSvg = cleanSvg.replaceFirst(RegExp(r'\n?```$'), '');
+      }
+    }
+
+    Widget backgroundWidget;
+    if (cleanSvg != null && cleanSvg.startsWith('http')) {
+      backgroundWidget = cleanSvg.endsWith('.svg') 
+          ? SvgPicture.network(cleanSvg, fit: BoxFit.cover)
+          : Image.network(cleanSvg, fit: BoxFit.cover);
+    } else if (cleanSvg != null && cleanSvg.contains('<svg')) {
+      try {
+        backgroundWidget = SvgPicture.string(
+          cleanSvg,
+          width: double.infinity,
+          height: double.infinity,
+          fit: BoxFit.cover,
+        );
+      } catch (e) {
+        backgroundWidget = Container(
+          color: Colors.red.shade100,
+          padding: const EdgeInsets.all(8),
+          child: SingleChildScrollView(
+            child: Text("ERR: $e\n\n$cleanSvg", style: const TextStyle(fontSize: 8, color: Colors.red)),
+          ),
+        );
+      }
+    } else {
+      backgroundWidget = Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
             colors: [AppColors.primary, AppColors.pinkLight],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
+        ),
+      );
+    }
+
+    return CardPress(
+      onTap: () => context.push('/book', extra: drop),
+      child: Container(
+        decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
@@ -128,59 +165,73 @@ class _BookCoverCard extends StatelessWidget {
             ),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: AppColors.white.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(12),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // Background Layer
+              backgroundWidget,
+              // Text Overlay
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: AppColors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.menu_book_rounded,
+                          color: AppColors.white, size: 20),
+                    ),
+                    const Spacer(),
+                    Text(
+                      drop.focusArea,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.white.withValues(alpha: 0.8),
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      drop.bookTitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.h1Playfair.copyWith(
+                        fontSize: 16,
+                        color: AppColors.white,
+                        height: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      drop.bookAuthor,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.white.withValues(alpha: 0.7),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      drop.date.toIso8601String().split('T')[0],
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: AppColors.white.withValues(alpha: 0.5),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              child: const Icon(Icons.menu_book_rounded,
-                  color: AppColors.white, size: 20),
-            ),
-            const Spacer(),
-            Text(
-              drop.focusArea,
-              style: TextStyle(
-                fontSize: 11,
-                color: AppColors.white.withValues(alpha: 0.8),
-                fontWeight: FontWeight.w500,
-                letterSpacing: 0.5,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              drop.bookTitle,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: AppTypography.h1Playfair.copyWith(
-                fontSize: 16,
-                color: AppColors.white,
-                height: 1.2,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              drop.bookAuthor,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 12,
-                color: AppColors.white.withValues(alpha: 0.7),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              drop.date.toIso8601String().split('T')[0],
-              style: TextStyle(
-                fontSize: 10,
-                color: AppColors.white.withValues(alpha: 0.5),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

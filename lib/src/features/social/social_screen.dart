@@ -391,7 +391,7 @@ class _SocialScreenState extends ConsumerState<SocialScreen> {
             : Row(
                 children: [
                   const Text('\u{1F525} ', style: TextStyle(fontSize: 14)),
-                  Text('${streak.currentStreak} day streak', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600)),
+                  Text('${streak.effectiveStreak} day streak', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600)),
                 ],
               ),
         trailing: IconButton(

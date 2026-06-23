@@ -11,6 +11,7 @@ import '../../core/app_typography.dart';
 import '../../providers/user_provider.dart';
 import '../../providers/social_provider.dart';
 import '../../providers/growth_drop_provider.dart';
+import '../../providers/journal_provider.dart';
 import '../../domain/models/growth_drop.dart';
 
 class StreakCompleteScreen extends ConsumerStatefulWidget {
@@ -174,7 +175,9 @@ class _StreakCompleteScreenState extends ConsumerState<StreakCompleteScreen> {
                 width: double.infinity,
                 child: GestureDetector(
                   onTap: () async {
-                    (await SharedPreferences.getInstance()).setBool('_pendingStreakComplete', true);
+                    if (widget.book?.giftedBy == null) {
+                      (await SharedPreferences.getInstance()).setBool('_pendingStreakComplete', true);
+                    }
                     if (context.mounted) context.go('/');
                   },
                   child: Container(
@@ -260,6 +263,10 @@ class _StreakCompleteScreenState extends ConsumerState<StreakCompleteScreen> {
         'is_read': true,
         'is_saved': true,
       });
+      
+      ref.invalidate(journalProvider);
+      ref.invalidate(readBooksCountProvider);
+
       if (mounted) {
         setState(() => _isSaved = true);
         ScaffoldMessenger.of(context).showSnackBar(

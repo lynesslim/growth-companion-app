@@ -392,8 +392,7 @@ class _FriendsBody extends StatelessWidget {
                         Text.rich(
                           TextSpan(
                             children: [
-                              TextSpan(text: 'Grow better, together. ', style: AppTypography.bodyInter.copyWith(fontSize: 14, color: AppColors.midGrey)),
-                              const TextSpan(text: '💜', style: TextStyle(fontSize: 14, fontFamily: 'Apple Color Emoji')),
+                              TextSpan(text: 'Grow better, together.', style: AppTypography.bodyInter.copyWith(fontSize: 14, color: AppColors.midGrey)),
                             ],
                           ),
                         ),

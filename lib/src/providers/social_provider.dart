@@ -4,6 +4,8 @@ import '../domain/models/friend.dart';
 import '../domain/models/social_drop.dart';
 import '../domain/models/social_streak.dart';
 import '../domain/models/user.dart' as app_user;
+import 'journal_provider.dart';
+import 'growth_drop_provider.dart';
 
 final socialProvider = AsyncNotifierProvider<SocialNotifier, SocialState>(() {
   return SocialNotifier();
@@ -450,7 +452,10 @@ class SocialNotifier extends AsyncNotifier<SocialState> {
           if (bookData.coverUrl != null) 'coverUrl': bookData.coverUrl,
         },
         'is_read': true,
+        'is_saved': true,
       });
+      ref.invalidate(journalProvider);
+      ref.invalidate(readBooksCountProvider);
     } catch (e) {
       rethrow;
     }

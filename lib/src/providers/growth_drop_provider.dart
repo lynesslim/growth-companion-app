@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:supabase_flutter/supabase_flutter.dart' as supa;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../domain/models/growth_drop.dart';
+import 'journal_provider.dart';
 
 class GrowthDropNotifier extends AsyncNotifier<GrowthDrop?> {
   @override
@@ -38,6 +39,7 @@ class GrowthDropNotifier extends AsyncNotifier<GrowthDrop?> {
       // If state was null (e.g. from race condition), populate it
       state = AsyncValue.data(currentDrop.copyWith(isRead: true));
     }
+    ref.invalidate(readBooksCountProvider);
   }
 
   Future<void> saveToJournal(GrowthDrop currentDrop) async {
@@ -54,6 +56,7 @@ class GrowthDropNotifier extends AsyncNotifier<GrowthDrop?> {
     } else {
       state = AsyncValue.data(currentDrop.copyWith(isSaved: true));
     }
+    ref.invalidate(journalProvider);
   }
 }
 

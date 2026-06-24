@@ -148,8 +148,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final prefs = await SharedPreferences.getInstance();
     if (!(prefs.getBool('_pendingStreakComplete') ?? false)) return;
 
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null) return;
+
     final today = DateTime.now().toIso8601String().split('T')[0];
-    if (prefs.getString('_postReadingModalLastShown_v2') == today) return;
+    final lastShownKey = '_postReadingModalLastShown_v2_$userId';
+    if (prefs.getString(lastShownKey) == today) return;
 
     if (!context.mounted) return;
     final modalRoute = ModalRoute.of(context);
@@ -160,7 +164,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _isCheckingSocialModal = true;
     try {
       await prefs.remove('_pendingStreakComplete');
-      await prefs.setString('_postReadingModalLastShown_v2', today);
+      await prefs.setString(lastShownKey, today);
 
       await showDialog(
         context: context,
@@ -373,7 +377,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // 3. Priority 3: Post-Reading Social Modal (Only after daily drop completion)
     final hasPendingStreak = prefs.getBool('_pendingStreakComplete') ?? false;
     final today = DateTime.now().toIso8601String().split('T')[0];
-    final lastShown = prefs.getString('_postReadingModalLastShown_v2');
+    final lastShownKey = '_postReadingModalLastShown_v2_${user.id}';
+    final lastShown = prefs.getString(lastShownKey);
     if (hasPendingStreak && lastShown != today) {
       _checkPostReadingModal();
       return;

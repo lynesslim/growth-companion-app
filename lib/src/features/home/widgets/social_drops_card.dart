@@ -211,39 +211,33 @@ class _FriendGiftCardState extends State<_FriendGiftCard>
                     const Spacer(),
                     Padding(
                       padding: const EdgeInsets.only(right: 42),
-                      child: SizedBox(
-                        height: 48,
-                        child: Align(
-                          alignment: Alignment.bottomLeft,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                widget.drop.bookData?.bookTitle ?? 'A Blind Box',
-                                style: GoogleFonts.inter(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.textPrimary,
-                                  height: 1.15,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              if (widget.drop.bookData?.bookAuthor != null) ...[
-                                const SizedBox(height: 2),
-                                Text(
-                                  'by ${widget.drop.bookData.bookAuthor}',
-                                  style: const TextStyle(
-                                    fontSize: 10,
-                                    color: AppColors.textTertiary,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ],
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            widget.drop.bookData?.bookTitle ?? 'A Blind Box',
+                            style: GoogleFonts.inter(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                              height: 1.15,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
+                          if (widget.drop.bookData?.bookAuthor != null) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              'by ${widget.drop.bookData.bookAuthor}',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: AppColors.textTertiary,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                     const SizedBox(height: 6),

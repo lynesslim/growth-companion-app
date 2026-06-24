@@ -34,6 +34,13 @@ class _StreakCompleteScreenState extends ConsumerState<StreakCompleteScreen> {
     _isSaved = widget.book?.isSaved ?? false;
     _confettiController = ConfettiController(duration: const Duration(seconds: 3));
     _confettiController.play();
+    
+    // Set pending streak complete flag in initState for daily drops to ensure it's written before navigation
+    if (widget.book?.giftedBy == null) {
+      SharedPreferences.getInstance().then((prefs) {
+        prefs.setBool('_pendingStreakComplete', true);
+      });
+    }
   }
 
   @override
@@ -159,7 +166,8 @@ class _StreakCompleteScreenState extends ConsumerState<StreakCompleteScreen> {
                 child: GestureDetector(
                   onTap: () async {
                     if (widget.book?.giftedBy == null) {
-                      (await SharedPreferences.getInstance()).setBool('_pendingStreakComplete', true);
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.setBool('_pendingStreakComplete', true);
                     }
                     if (context.mounted) context.go('/');
                   },

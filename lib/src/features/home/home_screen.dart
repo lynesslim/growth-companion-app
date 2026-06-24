@@ -59,7 +59,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   void _onRouteChanged() {
     if (!mounted) return;
-    if (GoRouterState.of(context).uri.path == '/') {
+    final isCurrent = ModalRoute.of(context)?.isCurrent ?? false;
+    if (isCurrent) {
       final dropState = ref.read(growthDropProvider);
       final drop = dropState.valueOrNull;
       if (drop != null && drop.isRead) {
@@ -102,10 +103,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       Map<String, dynamic> bookData = {};
       String message = "You've received a blind box from your friend!";
       if (sharedDropId != null && sharedDropId.isNotEmpty) {
-        final response = await supabase.rpc('get_shared_book', params: {'drop_id': sharedDropId});
-        if (response != null) {
-          bookData = Map<String, dynamic>.from(response);
-          message = "You've received a book from your friend!";
+        try {
+          final response = await supabase.rpc('get_shared_book', params: {'drop_id': sharedDropId});
+          if (response != null) {
+            if (response is List && response.isNotEmpty) {
+              bookData = Map<String, dynamic>.from(response.first);
+            } else if (response is Map) {
+              bookData = Map<String, dynamic>.from(response);
+            }
+            if (bookData.isNotEmpty) {
+              message = "You've received a book from your friend!";
+            }
+          }
+        } catch (e) {
+          debugPrint('_processInvite: get_shared_book failed: $e');
         }
       }
 
@@ -122,8 +133,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           SnackBar(content: Text(message)),
         );
       }
-    } catch (_) {
-      // ponytail: duplicates or already processed, silently ignore
+    } catch (e, stack) {
+      debugPrint('_processInvite: $e\n$stack');
     }
   }
 
@@ -131,104 +142,109 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   // ponytail: SharedPreferences-based daily guard; no DB needed for a check-once modal
   Future<void> _checkPostReadingModal() async {
-    if (_isCheckingSocialModal) return;
-    _isCheckingSocialModal = true;
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      if (!(prefs.getBool('_pendingStreakComplete') ?? false)) return;
-      await prefs.remove('_pendingStreakComplete');
+    // Early-return checks first — these must not touch _isCheckingSocialModal
+    final prefs = await SharedPreferences.getInstance();
+    if (!(prefs.getBool('_pendingStreakComplete') ?? false)) return;
 
     final today = DateTime.now().toIso8601String().split('T')[0];
     if (prefs.getString('_postReadingModalLastShown_v2') == today) return;
-    await prefs.setString('_postReadingModalLastShown_v2', today);
 
     if (!context.mounted) return;
-    if (GoRouterState.of(context).uri.path != '/') return;
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-        backgroundColor: AppColors.white,
-        contentPadding: const EdgeInsets.all(28),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppColors.primary, AppColors.pinkLight],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(22),
-              ),
-              child: const Center(
-                child: Icon(Icons.people_rounded, color: AppColors.white, size: 32),
-              ),
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Check out your friends\' streaks and gifts!',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: AppColors.grey900,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'See who\'s reading and send a book to keep the streak going.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 15, color: AppColors.grey500, height: 1.5),
-            ),
-            const SizedBox(height: 28),
-            SizedBox(
-              width: double.infinity,
-              child: GestureDetector(
-                onTap: () {
-                  Navigator.pop(ctx);
-                  context.go('/social');
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppColors.primary, AppColors.pinkLight],
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                    ),
-                    borderRadius: BorderRadius.circular(16),
+    final modalRoute = ModalRoute.of(context);
+    if (modalRoute == null || !modalRoute.isCurrent) return;
+
+    // All guards passed — lock and proceed
+    if (_isCheckingSocialModal) return;
+    _isCheckingSocialModal = true;
+    try {
+      await prefs.remove('_pendingStreakComplete');
+      await prefs.setString('_postReadingModalLastShown_v2', today);
+
+      await showDialog(
+        context: context,
+        barrierDismissible: true,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+          backgroundColor: AppColors.white,
+          contentPadding: const EdgeInsets.all(28),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppColors.primary, AppColors.pinkLight],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  child: const Center(
-                    child: Text(
-                      'Go to Friends',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.white,
+                  borderRadius: BorderRadius.circular(22),
+                ),
+                child: const Center(
+                  child: Icon(Icons.people_rounded, color: AppColors.white, size: 32),
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Check out your friends\' streaks and gifts!',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.grey900,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'See who\'s reading and send a book to keep the streak going.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 15, color: AppColors.grey500, height: 1.5),
+              ),
+              const SizedBox(height: 28),
+              SizedBox(
+                width: double.infinity,
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    context.go('/social');
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [AppColors.primary, AppColors.pinkLight],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'Go to Friends',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.white,
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 12),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text(
-                'Later',
-                style: TextStyle(color: AppColors.grey500, fontSize: 14),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text(
+                  'Later',
+                  style: TextStyle(color: AppColors.grey500, fontSize: 14),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-    );
+      );
     } finally {
       _isCheckingSocialModal = false;
     }

@@ -1,17 +1,31 @@
-Please implement the following exact changes to fix the invite link flow and modal race conditions.
+# Tasks: Fix Invite Flow, Friend Sync, and Post-Reading Modal Lock
 
-### 1. Fix Splash Screen blocking `/invite` route
-- **File**: `lib/src/core/router.dart`
-- **Action**: Locate the `// Enforce splash screen on first boot` redirect block.
-- **Change**: Exempt the `/invite` route so that the `InviteLandingScreen` can properly load and stash the invite tokens before the user is forced through the onboarding funnel.
-```dart
-      // Enforce splash screen on first boot
-      if (!SplashState.hasFinished && state.matchedLocation != '/splash' && state.matchedLocation != '/invite') {
-        return '/splash';
-      }
-```
+Please implement the following exact bug fixes in the codebase to resolve issues with the invite flow and the daily reading completion modal.
 
-### 2. Fix "Today's Drop" modal popping up during onboarding
-- **File**: `lib/src/features/auth/login_screen.dart`
-- **Action**: Completely delete the `ref.listenManual(authStateProvider)` listener block inside of the `initState()` method.
-- **Reason**: `LoginScreen` currently forces a premature `context.go('/')` upon signup/login. This races against the native `GoRouter` redirect, causing the `HomeScreen` to momentarily instantiate and fire its modal popups *underneath* the onboarding screen. By deleting this listener, we allow GoRouter's global `redirect` block to cleanly handle the routing natively.
+---
+
+### 1. Fix Invite Processing, Friend Sync & Swallow-All Try-Catch
+- **File**: `lib/src/features/home/home_screen.dart`
+- **Objective**: Prevent errors during the Supabase RPC `get_shared_book` or `social_drops` insertion from silently aborting the friendship update and swallowing debugging logs.
+- **Actions**:
+  1. Locate the `_processInvite` method.
+  2. Wrap the `supabase.rpc('get_shared_book', ...)` call in its own inner `try-catch` block. If it fails, log the error using `debugPrint` but do not rethrow; let `bookData` remain `{}` (acting as a fallback to the blindbox) so that the subsequent `social_drops` insert can still proceed.
+  3. Replace the outer silent `catch (_)` block with `catch (e, stack)` and log the error and stack trace using `debugPrint`.
+  4. Ensure `ref.invalidate(socialProvider)` is called successfully if the database updates run, so the UI updates the friend list and social drops immediately.
+
+---
+
+### 2. Fix Post-Reading Modal State Lock
+- **File**: `lib/src/features/home/home_screen.dart`
+- **Objective**: Prevent the `_isCheckingSocialModal` guard from permanently locking to `true` when early returns occur in `_checkPostReadingModal`.
+- **Actions**:
+  1. Locate the `_checkPostReadingModal()` method.
+  2. Refactor the method so that the guard check `if (_isCheckingSocialModal) return; _isCheckingSocialModal = true;` is only evaluated and set **after** the early-return checks have passed.
+  3. Specifically, do the SharedPreferences read, the `_pendingStreakComplete` check, the daily date checks, and the route checks *first*. If any of these checks fail and return early, they should not affect or set `_isCheckingSocialModal`.
+  4. Once all guards pass, set `_isCheckingSocialModal = true`, clear the pending streak flag in SharedPreferences, set the daily shown date, and show the dialog.
+  5. Reset `_isCheckingSocialModal = false` once the dialog is closed or dismissed.
+
+---
+
+### Completion Requirement
+When you have successfully completed these changes, **you MUST create a file named `DEEPSEEK_FINISHED.txt`** containing a brief summary of the changes you made. Do not wait for user input.

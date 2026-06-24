@@ -784,6 +784,11 @@ class _AllFriendsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final sorted = List<Friend>.from(socialState.acceptedFriends)
       ..sort((a, b) {
+        final streakA = _streakForFriend(a);
+        final streakB = _streakForFriend(b);
+        if (streakA != streakB) {
+          return streakB.compareTo(streakA); // highest streak first
+        }
         final dA = _lastInteractionForFriend(a);
         final dB = _lastInteractionForFriend(b);
         if (dA == null && dB == null) return 0;

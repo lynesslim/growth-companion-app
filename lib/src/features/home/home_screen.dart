@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:lottie/lottie.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/app_colors.dart';
@@ -15,6 +16,7 @@ import '../../shared/widgets/avatar_ring.dart';
 import '../../domain/models/friend.dart';
 import '../../domain/models/social_streak.dart';
 import '../../domain/models/growth_drop.dart';
+import '../social/social_utils.dart';
 import '../social/widgets/send_drop_dialog.dart';
 import 'widgets/home_header.dart';
 import 'widgets/growth_drop_card.dart';
@@ -29,6 +31,9 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _modalShown = false;
+  bool _giftModalShowing = false;
+  bool _generateModalShown = false;
+  bool _dropModalShown = false;
 
   RouterDelegate? _routerDelegate;
 
@@ -61,11 +66,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (!mounted) return;
     final isCurrent = ModalRoute.of(context)?.isCurrent ?? false;
     if (isCurrent) {
-      final dropState = ref.read(growthDropProvider);
-      final drop = dropState.valueOrNull;
-      if (drop != null && drop.isRead) {
-        _checkPostReadingModal();
-      }
+      _runModalQueue();
     }
   }
 
@@ -127,6 +128,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         'drop_date': DateTime.now().toIso8601String().split('T')[0],
         'book_data': bookData,
       });
+      await prefs.setBool('is_invite_signup_pending_gift', true);
       ref.invalidate(socialProvider);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -250,25 +252,142 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
+  void _showGiftUnboxingModal(dynamic drop) {
+    if (_giftModalShowing) return;
+    _giftModalShowing = true;
+
+    final senderName = drop.senderProfile?.name ?? 'A friend';
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        backgroundColor: AppColors.white,
+        contentPadding: const EdgeInsets.all(28),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Lottie.asset(
+              'assets/images/wrapped-gift.json',
+              width: 140,
+              height: 140,
+              repeat: true,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              "A Gift Awaits!",
+              textAlign: TextAlign.center,
+              style: AppTypography.h1Playfair.copyWith(color: AppColors.grey900, fontSize: 24),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              "Your friend $senderName sent you a mystery book tailored to your goals.",
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 15, color: AppColors.grey600, height: 1.5),
+            ),
+            const SizedBox(height: 28),
+            SizedBox(
+              width: double.infinity,
+              child: GestureDetector(
+                onTap: () async {
+                  Navigator.of(ctx).pop();
+                  _giftModalShowing = false;
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.remove('is_invite_signup_pending_gift');
+                  if (context.mounted) {
+                    SocialUtils.openDrop(context, ref, drop);
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [AppColors.primary, AppColors.pinkLight],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Center(
+                    child: Text(
+                      'Unpack Now',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _runModalQueue() async {
+    if (!mounted) return;
+
+    // Native check to ensure the Home Screen is the top-most active/visible route
+    final modalRoute = ModalRoute.of(context);
+    if (modalRoute == null || !modalRoute.isCurrent) return;
+
+    final dropState = ref.read(growthDropProvider);
+    final socialState = ref.read(socialProvider).valueOrNull;
+    final user = ref.read(userProvider).valueOrNull;
+
+    if (dropState.isLoading || socialState == null || user == null) return;
+    final prefs = await SharedPreferences.getInstance();
+
+    // 1. Priority 1: Invite Gift Unboxing Modal (Invite Signups Only)
+    final isInviteSignupPendingGift = prefs.getBool('is_invite_signup_pending_gift') ?? false;
+    if (isInviteSignupPendingGift) {
+      final unopenedDrops = socialState.receivedDrops.where((d) => !d.isOpened).toList();
+      if (unopenedDrops.isNotEmpty) {
+        _showGiftUnboxingModal(unopenedDrops.first);
+        return;
+      }
+    }
+
+    // 2. Priority 2: Today's Drop (Generate or Read)
+    final drop = dropState.valueOrNull;
+    if (drop == null) {
+      if (!_generateModalShown) {
+        _generateModalShown = true;
+        _showGenerateModal(context);
+      }
+      return;
+    }
+
+    if (!drop.isRead) {
+      if (!_dropModalShown) {
+        _dropModalShown = true;
+        _showDropModal(context);
+      }
+      return;
+    }
+
+    // 3. Priority 3: Post-Reading Social Modal (Only after daily drop completion)
+    final hasPendingStreak = prefs.getBool('_pendingStreakComplete') ?? false;
+    final today = DateTime.now().toIso8601String().split('T')[0];
+    final lastShown = prefs.getString('_postReadingModalLastShown_v2');
+    if (hasPendingStreak && lastShown != today) {
+      _checkPostReadingModal();
+      return;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final dropState = ref.watch(growthDropProvider);
     final socialState = ref.watch(socialProvider);
-    final drop = dropState.valueOrNull;
     final user = ref.watch(userProvider).valueOrNull;
 
-    if (!_modalShown && !dropState.isLoading && user != null) {
-      if (drop == null) {
-        _modalShown = true;
-        WidgetsBinding.instance.addPostFrameCallback((_) => _showGenerateModal(context));
-      } else if (!drop.isRead) {
-        _modalShown = true;
-        WidgetsBinding.instance.addPostFrameCallback((_) => _showDropModal(context));
-      }
-    }
-
-    if (!dropState.isLoading && drop != null && drop.isRead) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _checkPostReadingModal());
+    if (!dropState.isLoading && !socialState.isLoading && user != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _runModalQueue());
     }
 
     if (dropState.isLoading || socialState.isLoading) {
@@ -563,6 +682,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       // when the user pops back from the book screen
       ref.invalidate(growthDropProvider);
       _modalShown = false;
+      _generateModalShown = false;
+      _dropModalShown = false;
       if (mounted) setState(() {});
     } catch (e) {
       if (mounted) {
@@ -620,6 +741,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   Navigator.pop(ctx);
                   await context.push('/book');
                   _modalShown = false;
+                  _generateModalShown = false;
+                  _dropModalShown = false;
                   if (mounted) setState(() {});
                 },
                 child: Container(

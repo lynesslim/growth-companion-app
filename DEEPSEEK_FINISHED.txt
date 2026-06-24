@@ -1,31 +1,214 @@
-# Tasks: Fix Invite Flow, Friend Sync, and Post-Reading Modal Lock
+# Instructions for OpenCode: Implementing the Refined Priority-Based Home Page Modal Queue
 
-Please implement the following exact bug fixes in the codebase to resolve issues with the invite flow and the daily reading completion modal.
-
----
-
-### 1. Fix Invite Processing, Friend Sync & Swallow-All Try-Catch
-- **File**: `lib/src/features/home/home_screen.dart`
-- **Objective**: Prevent errors during the Supabase RPC `get_shared_book` or `social_drops` insertion from silently aborting the friendship update and swallowing debugging logs.
-- **Actions**:
-  1. Locate the `_processInvite` method.
-  2. Wrap the `supabase.rpc('get_shared_book', ...)` call in its own inner `try-catch` block. If it fails, log the error using `debugPrint` but do not rethrow; let `bookData` remain `{}` (acting as a fallback to the blindbox) so that the subsequent `social_drops` insert can still proceed.
-  3. Replace the outer silent `catch (_)` block with `catch (e, stack)` and log the error and stack trace using `debugPrint`.
-  4. Ensure `ref.invalidate(socialProvider)` is called successfully if the database updates run, so the UI updates the friend list and social drops immediately.
+Please implement the priority-based modal queue on the Home Page to prevent competing or overlapping modals. Follow the exact technical details below.
 
 ---
 
-### 2. Fix Post-Reading Modal State Lock
-- **File**: `lib/src/features/home/home_screen.dart`
-- **Objective**: Prevent the `_isCheckingSocialModal` guard from permanently locking to `true` when early returns occur in `_checkPostReadingModal`.
-- **Actions**:
-  1. Locate the `_checkPostReadingModal()` method.
-  2. Refactor the method so that the guard check `if (_isCheckingSocialModal) return; _isCheckingSocialModal = true;` is only evaluated and set **after** the early-return checks have passed.
-  3. Specifically, do the SharedPreferences read, the `_pendingStreakComplete` check, the daily date checks, and the route checks *first*. If any of these checks fail and return early, they should not affect or set `_isCheckingSocialModal`.
-  4. Once all guards pass, set `_isCheckingSocialModal = true`, clear the pending streak flag in SharedPreferences, set the daily shown date, and show the dialog.
-  5. Reset `_isCheckingSocialModal = false` once the dialog is closed or dismissed.
+## 1. Add State Flags to `_HomeScreenState`
+
+In `lib/src/features/home/home_screen.dart`, add the following state tracking flags to `_HomeScreenState`:
+```dart
+  bool _giftModalShowing = false;
+  bool _generateModalShown = false;
+  bool _dropModalShown = false;
+```
 
 ---
 
-### Completion Requirement
-When you have successfully completed these changes, **you MUST create a file named `DEEPSEEK_FINISHED.txt`** containing a brief summary of the changes you made. Do not wait for user input.
+## 2. Update `_processInvite`
+
+In `_processInvite()` in `home_screen.dart`, set a persistent SharedPreferences flag `is_invite_signup_pending_gift` to `true` when a social drop is successfully inserted into the database:
+```dart
+      await supabase.from('social_drops').insert({
+        'sender_id': senderId,
+        'recipient_id': userId,
+        'is_opened': false,
+        'drop_date': DateTime.now().toIso8601String().split('T')[0],
+        'book_data': bookData,
+      });
+      // Set invite signup pending gift flag
+      await prefs.setBool('is_invite_signup_pending_gift', true);
+```
+
+---
+
+## 3. Implement the Gift Unboxing Dialog
+
+Implement the `_showGiftUnboxingModal` method in `_HomeScreenState`:
+```dart
+  void _showGiftUnboxingModal(dynamic drop) {
+    if (_giftModalShowing) return;
+    _giftModalShowing = true;
+
+    final senderName = drop.senderProfile?.name ?? 'A friend';
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        backgroundColor: AppColors.white,
+        contentPadding: const EdgeInsets.all(28),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Lottie.asset(
+              'assets/images/wrapped-gift.json',
+              width: 140,
+              height: 140,
+              repeat: true,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              "A Gift Awaits!",
+              textAlign: TextAlign.center,
+              style: AppTypography.h1Playfair.copyWith(color: AppColors.grey900, fontSize: 24),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              "Your friend $senderName sent you a mystery book tailored to your goals.",
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 15, color: AppColors.grey600, height: 1.5),
+            ),
+            const SizedBox(height: 28),
+            SizedBox(
+              width: double.infinity,
+              child: GestureDetector(
+                onTap: () async {
+                  Navigator.of(ctx).pop();
+                  _giftModalShowing = false;
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.remove('is_invite_signup_pending_gift');
+                  if (context.mounted) {
+                    SocialUtils.openDrop(context, ref, drop);
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [AppColors.primary, AppColors.pinkLight],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Center(
+                    child: Text(
+                      'Unpack Now',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+```
+
+---
+
+## 4. Implement the Unified Modal Queue Coordinator
+
+Implement the `_runModalQueue` method in `_HomeScreenState`:
+```dart
+  Future<void> _runModalQueue() async {
+    if (!mounted) return;
+
+    // Native check to ensure the Home Screen is the top-most active/visible route
+    final modalRoute = ModalRoute.of(context);
+    if (modalRoute == null || !modalRoute.isCurrent) return;
+
+    final dropState = ref.read(growthDropProvider);
+    final socialState = ref.read(socialProvider).valueOrNull;
+    final user = ref.read(userProvider).valueOrNull;
+
+    if (dropState.isLoading || socialState == null || user == null) return;
+    final prefs = await SharedPreferences.getInstance();
+
+    // 1. Priority 1: Invite Gift Unboxing Modal (Invite Signups Only)
+    final isInviteSignupPendingGift = prefs.getBool('is_invite_signup_pending_gift') ?? false;
+    if (isInviteSignupPendingGift) {
+      final unopenedDrops = socialState.receivedDrops.where((d) => !d.isOpened).toList();
+      if (unopenedDrops.isNotEmpty) {
+        _showGiftUnboxingModal(unopenedDrops.first);
+        return;
+      }
+    }
+
+    // 2. Priority 2: Today's Drop (Generate or Read)
+    final drop = dropState.valueOrNull;
+    if (drop == null) {
+      if (!_generateModalShown) {
+        _generateModalShown = true;
+        _showGenerateModal(context);
+      }
+      return;
+    }
+
+    if (!drop.isRead) {
+      if (!_dropModalShown) {
+        _dropModalShown = true;
+        _showDropModal(context);
+      }
+      return;
+    }
+
+    // 3. Priority 3: Post-Reading Social Modal (Only after daily drop completion)
+    final hasPendingStreak = prefs.getBool('_pendingStreakComplete') ?? false;
+    final today = DateTime.now().toIso8601String().split('T')[0];
+    final lastShown = prefs.getString('_postReadingModalLastShown_v2');
+    if (hasPendingStreak && lastShown != today) {
+      _checkPostReadingModal();
+      return;
+    }
+  }
+```
+
+---
+
+## 5. Integrate `_runModalQueue` & Reset Flags
+
+1. In the `build` method of `_HomeScreenState`, replace the old build-time modal checks with a single callback:
+   ```dart
+    if (!dropState.isLoading && !socialState.isLoading && user != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _runModalQueue());
+    }
+   ```
+2. In `_onRouteChanged()`, update it to trigger `_runModalQueue()` when `isCurrent` is true:
+   ```dart
+  void _onRouteChanged() {
+    if (!mounted) return;
+    final isCurrent = ModalRoute.of(context)?.isCurrent ?? false;
+    if (isCurrent) {
+      _runModalQueue();
+    }
+  }
+   ```
+3. Reset all shown flags (`_modalShown = false`, `_generateModalShown = false`, `_dropModalShown = false`) when:
+   - In `_generateDrop()`, after invalidating the provider:
+     ```dart
+      ref.invalidate(growthDropProvider);
+      _modalShown = false;
+      _generateModalShown = false;
+      _dropModalShown = false;
+      if (mounted) setState(() {});
+     ```
+   - In the `onTap` action of `_showDropModal()` when opening the book:
+     ```dart
+                  Navigator.pop(ctx);
+                  await context.push('/book');
+                  _modalShown = false;
+                  _generateModalShown = false;
+                  _dropModalShown = false;
+                  if (mounted) setState(() {});
+     ```
+
+Please execute these changes carefully and make sure all imports and styles match the existing ones.

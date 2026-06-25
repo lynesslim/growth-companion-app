@@ -1078,13 +1078,22 @@ class _FriendTile extends StatelessWidget {
                 : null,
           ),
           child: Center(
-            child: Text(
-              '🔥',
-              style: TextStyle(
-                fontSize: isStep5 ? 14 : 12,
-                fontFamily: 'Apple Color Emoji',
-              ),
-            ),
+            child: (hasStreak && streak > 3)
+                ? SizedBox(
+                    width: isStep5 ? 20 : 16,
+                    height: isStep5 ? 20 : 16,
+                    child: Lottie.asset(
+                      'assets/images/fire.json',
+                      repeat: true,
+                    ),
+                  )
+                : Text(
+                    '🔥',
+                    style: TextStyle(
+                      fontSize: isStep5 ? 14 : 12,
+                      fontFamily: 'Apple Color Emoji',
+                    ),
+                  ),
           ),
         );
 

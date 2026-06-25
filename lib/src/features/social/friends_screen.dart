@@ -1185,7 +1185,16 @@ class _FriendTile extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           if (hasStreak) ...[
-                            const Text('🔥', style: TextStyle(fontSize: 14, fontFamily: 'Apple Color Emoji')),
+                            streak > 3
+                                ? SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: Lottie.asset(
+                                      'assets/images/fire.json',
+                                      repeat: true,
+                                    ),
+                                  )
+                                : const Text('🔥', style: TextStyle(fontSize: 14, fontFamily: 'Apple Color Emoji')),
                             const SizedBox(width: 4),
                             Text(
                               '$streak',

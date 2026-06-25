@@ -136,8 +136,8 @@ class StreakBadge extends StatelessWidget {
         children: [
           count > 3
               ? SizedBox(
-                  width: 14,
-                  height: 14,
+                  width: 18,
+                  height: 18,
                   child: Lottie.asset(
                     'assets/images/fire.json',
                     repeat: true,

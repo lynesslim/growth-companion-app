@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:lottie/lottie.dart';
 import '../../core/app_colors.dart';
 import '../../core/app_gradients.dart';
 import '../../core/app_typography.dart';
@@ -775,24 +776,38 @@ class _HighlightCard extends StatelessWidget {
                             'You and ${friendName.split(' ').first} are on a',
                             style: AppTypography.bodyInter.copyWith(fontSize: 12, color: AppColors.black),
                           ),
-                          RichText(
-                            text: TextSpan(
-                              style: AppTypography.h2Inter.copyWith(fontSize: 18, fontWeight: FontWeight.bold),
-                              children: [
-                                TextSpan(
-                                  text: '$streakCount-day',
-                                  style: TextStyle(
-                                    foreground: Paint()..shader = AppGradients.friendsHeaderText.createShader(const Rect.fromLTWH(0, 0, 100, 20)),
-                                  ),
-                                ),
-                                TextSpan(
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              RichText(
+                                text: TextSpan(
+                                  style: AppTypography.h2Inter.copyWith(fontSize: 18, fontWeight: FontWeight.bold),
                                   children: [
+                                    TextSpan(
+                                      text: '$streakCount-day',
+                                      style: TextStyle(
+                                        foreground: Paint()..shader = AppGradients.friendsHeaderText.createShader(const Rect.fromLTWH(0, 0, 100, 20)),
+                                      ),
+                                    ),
                                     const TextSpan(text: ' streak ', style: TextStyle(color: AppColors.black)),
-                                    const TextSpan(text: '🔥', style: TextStyle(color: AppColors.black, fontFamily: 'Apple Color Emoji')),
                                   ],
                                 ),
-                              ],
-                            ),
+                              ),
+                              if (streakCount > 3)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 2),
+                                  child: SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: Lottie.asset(
+                                      'assets/images/fire.json',
+                                      repeat: true,
+                                    ),
+                                  ),
+                                )
+                              else
+                                const Text('🔥', style: TextStyle(fontSize: 18, fontFamily: 'Apple Color Emoji')),
+                            ],
                           ),
                         ],
                       ),

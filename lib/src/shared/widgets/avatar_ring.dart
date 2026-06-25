@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 import '../../core/app_colors.dart';
 import '../../core/app_gradients.dart';
 
@@ -133,7 +134,16 @@ class StreakBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('🔥', style: TextStyle(fontSize: 11, fontFamily: 'Apple Color Emoji')),
+          count > 3
+              ? SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: Lottie.asset(
+                    'assets/images/fire.json',
+                    repeat: true,
+                  ),
+                )
+              : const Text('🔥', style: TextStyle(fontSize: 11, fontFamily: 'Apple Color Emoji')),
           const SizedBox(width: 2),
           Text(
             '$count',

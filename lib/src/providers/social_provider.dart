@@ -167,9 +167,9 @@ class SocialNotifier extends AsyncNotifier<SocialState> {
     );
   }
 
-  Future<void> sendDrop(String friendId) async {
+  Future<int?> sendDrop(String friendId) async {
     final user = _supabase.auth.currentUser;
-    if (user == null) return;
+    if (user == null) return null;
     try {
       final today = DateTime.now().toIso8601String().split('T')[0];
       final isAdmin = state.value?.isAdmin ?? false;
@@ -207,9 +207,9 @@ class SocialNotifier extends AsyncNotifier<SocialState> {
         rethrow;
       }
 
-      await _updateStreak(friendId, today);
-
+      final newStreak = await _updateStreak(friendId, today);
       ref.invalidateSelf();
+      return newStreak;
     } catch (e) {
       print('Error sending drop: $e');
       rethrow;
@@ -235,9 +235,9 @@ class SocialNotifier extends AsyncNotifier<SocialState> {
     }
   }
 
-  Future<void> sendBookFromJournal(String friendId, Map<String, dynamic> bookData) async {
+  Future<int?> sendBookFromJournal(String friendId, Map<String, dynamic> bookData) async {
     final user = _supabase.auth.currentUser;
-    if (user == null) return;
+    if (user == null) return null;
     try {
       final today = DateTime.now().toIso8601String().split('T')[0];
       final isAdmin = state.value?.isAdmin ?? false;
@@ -263,18 +263,19 @@ class SocialNotifier extends AsyncNotifier<SocialState> {
         'book_data': bookData,
       });
 
-      await _updateStreak(friendId, today);
+      final newStreak = await _updateStreak(friendId, today);
 
       ref.invalidateSelf();
+      return newStreak;
     } catch (e) {
       print('Error sending book: $e');
       rethrow;
     }
   }
 
-  Future<void> _updateStreak(String friendId, String today) async {
+  Future<int?> _updateStreak(String friendId, String today) async {
     final user = _supabase.auth.currentUser;
-    if (user == null) return;
+    if (user == null) return null;
 
     var streakData = await _supabase
         .from('social_streaks')
@@ -298,7 +299,7 @@ class SocialNotifier extends AsyncNotifier<SocialState> {
       final otherDate = isUser1 ? streakData['last_shared_date_2'] : streakData['last_shared_date_1'];
 
       if (myLastDate == today) {
-        return; // already sent today, no double-count
+        return null; // already sent today, no double-count
       }
 
       final todayDate = DateTime.parse(today);
@@ -313,8 +314,10 @@ class SocialNotifier extends AsyncNotifier<SocialState> {
         newStreak = 0;
       }
 
+      bool isIncremented = false;
       if (otherDate == today) {
         newStreak += 1;
+        isIncremented = true;
       }
 
       final updatePayload = <String, dynamic>{
@@ -326,6 +329,7 @@ class SocialNotifier extends AsyncNotifier<SocialState> {
         updatePayload['last_shared_date_2'] = today;
       }
       await _supabase.from('social_streaks').update(updatePayload).eq('id', streakData['id']);
+      return isIncremented ? newStreak : null;
     } else {
       await _supabase.from('social_streaks').insert({
         'user_id_1': user.id,
@@ -333,6 +337,7 @@ class SocialNotifier extends AsyncNotifier<SocialState> {
         'last_shared_date_1': today,
         'current_streak': 0,
       });
+      return null;
     }
   }
 

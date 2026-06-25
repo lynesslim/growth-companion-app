@@ -8,6 +8,7 @@ class User {
   final DateTime? lastDropDate;
   final bool isAdmin;
   final int booksRead;
+  final bool hasCompletedTutorial;
 
   const User({
     required this.id,
@@ -19,6 +20,7 @@ class User {
     this.lastDropDate,
     this.isAdmin = false,
     this.booksRead = 0,
+    this.hasCompletedTutorial = false,
   });
 
   User copyWith({
@@ -31,6 +33,7 @@ class User {
     DateTime? lastDropDate,
     bool? isAdmin,
     int? booksRead,
+    bool? hasCompletedTutorial,
   }) {
     return User(
       id: id ?? this.id,
@@ -42,6 +45,7 @@ class User {
       lastDropDate: lastDropDate ?? this.lastDropDate,
       isAdmin: isAdmin ?? this.isAdmin,
       booksRead: booksRead ?? this.booksRead,
+      hasCompletedTutorial: hasCompletedTutorial ?? this.hasCompletedTutorial,
     );
   }
 
@@ -55,6 +59,7 @@ class User {
         'last_active_date': lastDropDate?.toIso8601String().split('T')[0],
         'is_admin': isAdmin,
         'books_read': booksRead,
+        'has_completed_tutorial': hasCompletedTutorial,
       };
 
   factory User.fromJson(Map<String, dynamic> json) => User(
@@ -71,6 +76,7 @@ class User {
             : null,
         isAdmin: (json['is_admin'] as bool?) ?? false,
         booksRead: (json['books_read'] as num?)?.toInt() ?? 0,
+        hasCompletedTutorial: (json['has_completed_tutorial'] as bool?) ?? false,
       );
 
   @override
@@ -83,8 +89,9 @@ class User {
           level == other.level &&
           currentStreak == other.currentStreak &&
           isAdmin == other.isAdmin &&
-          booksRead == other.booksRead;
+          booksRead == other.booksRead &&
+          hasCompletedTutorial == other.hasCompletedTutorial;
 
   @override
-  int get hashCode => Object.hash(id, name, currentXp, level, currentStreak, isAdmin, booksRead);
+  int get hashCode => Object.hash(id, name, currentXp, level, currentStreak, isAdmin, booksRead, hasCompletedTutorial);
 }

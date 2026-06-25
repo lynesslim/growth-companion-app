@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/app_colors.dart';
 import '../../../core/app_gradients.dart';
 import '../../../core/animated_widgets.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../providers/user_provider.dart';
+import '../../../providers/tutorial_provider.dart';
+import '../../../providers/social_provider.dart';
 
 class HomeHeader extends ConsumerWidget {
   const HomeHeader({super.key});
@@ -79,41 +83,138 @@ class HomeHeader extends ConsumerWidget {
                 delayMs: 0,
                 child: Column(
                   children: [
-                    Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        Container(
-                          width: 60,
-                          height: 60,
-                          decoration: const BoxDecoration(
-                            gradient: AppGradients.headerPremiumGradient,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Center(
-                          child: Text(
-                            name[0].toUpperCase(),
-                            style: const TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 28,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          ),
-                        ),
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: Container(
-                            width: 16,
-                            height: 16,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF39C96B),
+                    GestureDetector(
+                      onTap: () {
+                        context.go('/profile');
+                      },
+                      onLongPress: () async {
+                        final uid = ref.read(userProvider).valueOrNull?.id;
+                        if (uid == null) return;
+                        
+                        final supabase = Supabase.instance.client;
+                        final botId = '10000000-1000-1000-1000-100000000000';
+                        
+                        try {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Resetting Clooo Buddy friendship for test... ⏳')),
+                          );
+                          
+                          // 1. Delete any existing friendship or requests (both directions)
+                          await supabase
+                              .from('friends')
+                              .delete()
+                              .eq('user_id_1', uid)
+                              .eq('user_id_2', botId);
+                          await supabase
+                              .from('friends')
+                              .delete()
+                              .eq('user_id_1', botId)
+                              .eq('user_id_2', uid);
+                              
+                          // 2. Delete streaks (both directions)
+                          await supabase
+                              .from('social_streaks')
+                              .delete()
+                              .eq('user_id_1', uid)
+                              .eq('user_id_2', botId);
+                          await supabase
+                              .from('social_streaks')
+                              .delete()
+                              .eq('user_id_1', botId)
+                              .eq('user_id_2', uid);
+                              
+                          // 3. Update social drops (user→bot and bot→user, separate for RLS)
+                          // ponytail: since RLS doesn't permit DELETE on social_drops, we update
+                          // the drop_date of today's drops to an old date to bypass the unique constraint.
+                          final todayStr = DateTime.now().toIso8601String().split('T')[0];
+                          await supabase
+                              .from('social_drops')
+                              .update({'drop_date': '2000-01-01'})
+                              .eq('sender_id', uid)
+                              .eq('recipient_id', botId)
+                              .eq('drop_date', todayStr);
+                          try {
+                            await supabase
+                                .from('social_drops')
+                                .update({'drop_date': '2000-01-01'})
+                                .eq('sender_id', botId)
+                                .eq('recipient_id', uid)
+                                .eq('drop_date', todayStr);
+                          } catch (_) {}
+                              
+                          // 4. Reset user's own streak in profiles
+                          await supabase
+                              .from('profiles')
+                              .update({
+                                'current_streak': 0,
+                                'last_active_date': null,
+                              })
+                              .eq('id', uid);
+
+                          // 5. Insert fresh pending friend request from Clooo Buddy to User
+                          await supabase.from('friends').insert({
+                            'user_id_1': botId,
+                            'user_id_2': uid,
+                            'status': 'pending',
+                          });
+                          
+                          // 6. Invalidate providers so everything reloads fresh
+                          ref.invalidate(socialProvider);
+                          ref.invalidate(userProvider);
+                          
+                          // 7. Start the tutorial
+                          ref.read(tutorialStepProvider.notifier).startTutorial();
+                          
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).clearSnackBars();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Tutorial mode triggered! Full reset! 🚀')),
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Error resetting: $e')),
+                            );
+                          }
+                        }
+                      },
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Container(
+                            width: 60,
+                            height: 60,
+                            decoration: const BoxDecoration(
+                              gradient: AppGradients.headerPremiumGradient,
                               shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2.5),
+                            ),
+                            child: Center(
+                            child: Text(
+                              name[0].toUpperCase(),
+                              style: const TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 28,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                             ),
                           ),
-                        ),
-                      ],
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              width: 16,
+                              height: 16,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF39C96B),
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 2.5),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 10),
                     _StreakPill(days: streak),

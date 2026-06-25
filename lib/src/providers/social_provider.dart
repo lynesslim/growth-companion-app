@@ -189,6 +189,8 @@ class SocialNotifier extends AsyncNotifier<SocialState> {
         }
       }
 
+
+
       // 2. Insert drop
       try {
         await _supabase.from('social_drops').insert({

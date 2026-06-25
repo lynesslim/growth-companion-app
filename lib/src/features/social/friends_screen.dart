@@ -12,10 +12,11 @@ import '../../core/animated_widgets.dart';
 import '../../domain/models/friend.dart';
 import '../../domain/models/social_streak.dart';
 import '../../providers/social_provider.dart';
+import '../../providers/tutorial_provider.dart';
 import '../../providers/user_provider.dart';
 import 'social_utils.dart';
 import '../../providers/journal_provider.dart';
-import '../../domain/models/growth_drop.dart';
+
 import '../../shared/widgets/avatar_ring.dart';
 import 'widgets/send_drop_dialog.dart';
 
@@ -151,7 +152,31 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
   }
 
   Widget _buildPendingRequest(Friend req) {
-    return CardPress(
+    final isCloooBuddy = req.profile?.id == '10000000-1000-1000-1000-100000000000';
+    final tutorialStep = ref.watch(tutorialStepProvider);
+    final isAcceptStep = tutorialStep == TutorialStep.step2AcceptRequest;
+
+    Widget checkButton = IconButton(
+      key: isCloooBuddy ? acceptRequestKey : null,
+      icon: const Icon(Icons.check_circle, color: Colors.green),
+      onPressed: () {
+        if (isAcceptStep && !isCloooBuddy) return;
+        HapticFeedback.lightImpact();
+        ref.read(socialProvider.notifier).acceptFriendRequest(req.id);
+        if (isCloooBuddy && isAcceptStep) {
+          ref.read(tutorialStepProvider.notifier).nextStep();
+        }
+      },
+    );
+
+    if (isCloooBuddy && isAcceptStep) {
+      checkButton = _PulsingButtonWrapper(
+        active: true,
+        child: checkButton,
+      );
+    }
+
+    Widget card = CardPress(
       child: Card(
         margin: const EdgeInsets.only(bottom: 12),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -166,25 +191,29 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              IconButton(
-                icon: const Icon(Icons.check_circle, color: Colors.green),
-                onPressed: () {
-                  HapticFeedback.lightImpact();
-                  ref.read(socialProvider.notifier).acceptFriendRequest(req.id);
-                },
-              ),
-              IconButton(
-                icon: const Icon(Icons.cancel, color: Colors.red),
-                onPressed: () {
-                  HapticFeedback.lightImpact();
-                  ref.read(socialProvider.notifier).declineFriendRequest(req.id);
-                },
-              ),
+              checkButton,
+              if (!isAcceptStep)
+                IconButton(
+                  icon: const Icon(Icons.cancel, color: Colors.red),
+                  onPressed: () {
+                    HapticFeedback.lightImpact();
+                    ref.read(socialProvider.notifier).declineFriendRequest(req.id);
+                  },
+                ),
             ],
           ),
         ),
       ),
     );
+
+    if (isAcceptStep && !isCloooBuddy) {
+      card = Opacity(
+        opacity: 0.25,
+        child: IgnorePointer(child: card),
+      );
+    }
+
+    return card;
   }
 
 
@@ -192,54 +221,85 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
   Widget build(BuildContext context) {
     final socialStateAsync = ref.watch(socialProvider);
     final userStateAsync = ref.watch(userProvider);
+    final tutorialStep = ref.watch(tutorialStepProvider);
+    
     // Watch journalProvider so it loads data proactively
     ref.watch(journalProvider);
 
+    // Fallback: If we are on Step 2 (accept request) but Clooo Buddy's request is not in the list,
+    // automatically skip to Step 3 (send drop) so the user is never stuck.
+    if (tutorialStep == TutorialStep.step2AcceptRequest && socialStateAsync.hasValue) {
+      final pendingRequests = socialStateAsync.value?.pendingRequests ?? [];
+      final hasCloooBuddyRequest = pendingRequests.any((req) => req.profile?.id == '10000000-1000-1000-1000-100000000000');
+      if (!hasCloooBuddyRequest) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            ref.read(tutorialStepProvider.notifier).setStep(TutorialStep.step3SendDrop);
+          }
+        });
+      }
+    }
+
+    // ponytail: use valueOrNull to prevent flash during provider reloads (red screen fix).
+    // When socialProvider invalidates, the AsyncValue briefly goes to loading — using
+    // .when() would swap the entire body to a spinner, causing a jarring flash.
+    final socialState = socialStateAsync.valueOrNull;
+    if (socialState == null) {
+      return Scaffold(
+        backgroundColor: AppColors.scaffoldGrey,
+        body: socialStateAsync.isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Center(child: Text('Error: ${socialStateAsync.error}')),
+      );
+    }
+
+    final userId = userStateAsync.valueOrNull?.id;
+    final currentUserName = userStateAsync.valueOrNull?.name ?? 'You';
+
+    final searchResultWidgets = socialState.isSearching
+        ? [const Padding(
+            padding: EdgeInsets.only(top: 16),
+            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          )]
+        : socialState.searchResults.isNotEmpty
+            ? socialState.searchResults.map((u) => _buildSearchResult(u, userId)).toList()
+            : <Widget>[];
+
+    final pendingRequestWidgets = socialState.pendingRequests.isNotEmpty
+        ? [
+            EntranceFadeSlide(
+              delayMs: 150,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 24),
+                child: Text(
+                  'Pending Requests', 
+                  style: AppTypography.h2Inter.copyWith(
+                    fontSize: 16, 
+                    fontWeight: FontWeight.w600, 
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+            ),
+            ...socialState.pendingRequests.map((req) => _buildPendingRequest(req)),
+            const SizedBox(height: 16),
+          ]
+        : <Widget>[];
+
     return Scaffold(
       backgroundColor: AppColors.scaffoldGrey,
-      body: socialStateAsync.when(
-        data: (socialState) {
-          final userId = userStateAsync.valueOrNull?.id;
-          final currentUserName = userStateAsync.valueOrNull?.name ?? 'You';
-
-          final searchResultWidgets = socialState.isSearching
-              ? [const Padding(
-                  padding: EdgeInsets.only(top: 16),
-                  child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                )]
-              : socialState.searchResults.isNotEmpty
-                  ? socialState.searchResults.map((u) => _buildSearchResult(u, userId)).toList()
-                  : <Widget>[];
-
-          final pendingRequestWidgets = socialState.pendingRequests.isNotEmpty
-              ? [
-                  EntranceFadeSlide(
-                    delayMs: 150,
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 24),
-                      child: Text('Pending Requests', style: AppTypography.h2Inter.copyWith(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.primary)),
-                    ),
-                  ),
-                  ...socialState.pendingRequests.map((req) => _buildPendingRequest(req)),
-                  const SizedBox(height: 16),
-                ]
-              : <Widget>[];
-
-          return _FriendsBody(
-            userId: userId,
-            currentUserName: currentUserName,
-            socialState: socialState,
-            searchController: _searchController,
-            onSearchChanged: _onSearchChanged,
-            onShareInvite: () => _shareInvite(userId),
-            onSendDrop: (f) => showSendDropDialog(context, ref, f),
-            onOpenDrop: (drop) => SocialUtils.openDrop(context, ref, drop),
-            searchResultWidgets: searchResultWidgets,
-            pendingRequestWidgets: pendingRequestWidgets,
-          );
-        },
-        error: (e, _) => Center(child: Text('Error: $e')),
-        loading: () => const Center(child: CircularProgressIndicator()),
+      body: _FriendsBody(
+        userId: userId,
+        currentUserName: currentUserName,
+        socialState: socialState,
+        searchController: _searchController,
+        onSearchChanged: _onSearchChanged,
+        onShareInvite: () => _shareInvite(userId),
+        onSendDrop: (f) => showSendDropDialog(context, ref, f),
+        onOpenDrop: (drop) => SocialUtils.openDrop(context, ref, drop),
+        searchResultWidgets: searchResultWidgets,
+        pendingRequestWidgets: pendingRequestWidgets,
+        tutorialStep: tutorialStep,
       ),
     );
   }
@@ -256,6 +316,7 @@ class _FriendsBody extends StatelessWidget {
   final void Function(dynamic drop) onOpenDrop;
   final List<Widget> searchResultWidgets;
   final List<Widget> pendingRequestWidgets;
+  final TutorialStep tutorialStep;
 
   const _FriendsBody({
     required this.userId,
@@ -268,6 +329,7 @@ class _FriendsBody extends StatelessWidget {
     required this.onOpenDrop,
     required this.searchResultWidgets,
     required this.pendingRequestWidgets,
+    required this.tutorialStep,
   });
 
   Friend? get _topStreakFriend {
@@ -303,158 +365,190 @@ class _FriendsBody extends StatelessWidget {
     final topFriend = _topStreakFriend;
     final topStreak = topFriend != null ? _streakForFriend(topFriend) : 0;
 
+    final isStep2 = tutorialStep == TutorialStep.step2AcceptRequest;
+    final isStep3 = tutorialStep == TutorialStep.step3SendDrop;
+    final isStep5 = tutorialStep == TutorialStep.step5StreakExplanation;
+    final isTutorialActive = isStep2 || isStep3 || isStep5;
+
+    Widget maybeDim({required Widget child, required bool dim}) {
+      if (dim) {
+        return Opacity(
+          opacity: 0.25,
+          child: IgnorePointer(child: child),
+        );
+      }
+      return child;
+    }
+
+
     return Stack(
       children: [
-
         ListView(
           padding: const EdgeInsets.only(left: 24, right: 24, top: 60, bottom: 100),
           children: [
-            EntranceFadeSlide(
-              delayMs: 0,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        RichText(
-                          text: TextSpan(
-                            style: AppTypography.h1Playfair.copyWith(fontSize: 34, fontWeight: FontWeight.w700),
-                            children: [
-                              TextSpan(
-                                text: 'Friends ',
-                                style: const TextStyle(color: AppColors.black),
-                              ),
-                              TextSpan(
-                                text: '& Streaks',
-                                style: TextStyle(
-                                  foreground: Paint()..shader = AppGradients.friendsHeaderText.createShader(const Rect.fromLTWH(0, 0, 200, 40)),
+            maybeDim(
+              dim: isTutorialActive,
+              child: EntranceFadeSlide(
+                delayMs: 0,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          RichText(
+                            text: TextSpan(
+                              style: AppTypography.h1Playfair.copyWith(fontSize: 34, fontWeight: FontWeight.w700),
+                              children: [
+                                TextSpan(
+                                  text: 'Friends ',
+                                  style: const TextStyle(color: AppColors.black),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text.rich(
-                          TextSpan(
-                            children: [
-                              TextSpan(text: 'Grow better, together.', style: AppTypography.bodyInter.copyWith(fontSize: 14, color: AppColors.midGrey)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  EntranceFadeSlide(
-                    delayMs: 100,
-                    child: PressScale(
-                      onTap: onShareInvite,
-                      child: Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          gradient: AppGradients.addFriendButton,
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF8A4FFF).withValues(alpha: 0.3),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
+                                TextSpan(
+                                  text: '& Streaks',
+                                  style: TextStyle(
+                                    foreground: Paint()..shader = AppGradients.friendsHeaderText.createShader(const Rect.fromLTWH(0, 0, 200, 40)),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                        child: const Icon(Icons.person_add, color: AppColors.white, size: 22),
+                          ),
+                          const SizedBox(height: 4),
+                          Text.rich(
+                            TextSpan(
+                              children: [
+                                TextSpan(text: 'Grow better, together.', style: AppTypography.bodyInter.copyWith(fontSize: 14, color: AppColors.midGrey)),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            EntranceFadeSlide(
-              delayMs: 100,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: AppColors.white,
-                  borderRadius: BorderRadius.circular(50),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.03),
-                      blurRadius: 10,
-                      offset: const Offset(0, 2),
+                    const SizedBox(width: 12),
+                    EntranceFadeSlide(
+                      delayMs: 100,
+                      child: PressScale(
+                        onTap: onShareInvite,
+                        child: Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            gradient: AppGradients.addFriendButton,
+                            borderRadius: BorderRadius.circular(24),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF8A4FFF).withValues(alpha: 0.3),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(Icons.person_add, color: AppColors.white, size: 22),
+                        ),
+                      ),
                     ),
                   ],
                 ),
-                child: TextField(
-                  controller: searchController,
-                  onChanged: onSearchChanged,
-                  decoration: InputDecoration(
-                    hintText: 'Search by name or email...',
-                    hintStyle: const TextStyle(color: AppColors.grey400, fontSize: 15),
-                    prefixIcon: const Icon(Icons.search, color: AppColors.grey400, size: 22),
-                    suffixIcon: searchController.text.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear, size: 18),
-                            onPressed: () {
-                              searchController.clear();
-                              onSearchChanged('');
-                            },
-                          )
-                        : null,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(50), borderSide: BorderSide.none),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+              ),
+            ),
+            const SizedBox(height: 24),
+            maybeDim(
+              dim: isTutorialActive,
+              child: EntranceFadeSlide(
+                delayMs: 100,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.white,
+                    borderRadius: BorderRadius.circular(50),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.03),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: searchController,
+                    onChanged: onSearchChanged,
+                    decoration: InputDecoration(
+                      hintText: 'Search by name or email...',
+                      hintStyle: const TextStyle(color: AppColors.grey400, fontSize: 15),
+                      prefixIcon: const Icon(Icons.search, color: AppColors.grey400, size: 22),
+                      suffixIcon: searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, size: 18),
+                              onPressed: () {
+                                searchController.clear();
+                                onSearchChanged('');
+                              },
+                            )
+                          : null,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(50), borderSide: BorderSide.none),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                    ),
                   ),
                 ),
               ),
             ),
             if (searchResultWidgets.isNotEmpty || pendingRequestWidgets.isNotEmpty)
               const SizedBox(height: 16),
-            ...searchResultWidgets,
+            ...searchResultWidgets.map((w) => maybeDim(dim: isTutorialActive, child: w)),
             if (searchResultWidgets.isNotEmpty && pendingRequestWidgets.isNotEmpty)
               const SizedBox(height: 24),
-            ...pendingRequestWidgets,
+            ...pendingRequestWidgets.map((w) => maybeDim(dim: isStep3 || isStep5, child: w)),
             const SizedBox(height: 32),
-            EntranceFadeSlide(
-              delayMs: 200,
-              child: _ClosestStreaksSection(
-                userId: userId,
-                socialState: socialState,
-                onFriendTap: (f) {
-                  if (f.profile != null) {
-                    HapticFeedback.lightImpact();
-                    context.push('/friend-profile', extra: f.profile);
-                  }
-                },
-                onOpenDrop: onOpenDrop,
+            maybeDim(
+              dim: isStep2 || isStep3 || isStep5,
+              child: EntranceFadeSlide(
+                delayMs: 200,
+                child: _ClosestStreaksSection(
+                  userId: userId,
+                  socialState: socialState,
+                  onFriendTap: (f) {
+                    if (f.profile != null) {
+                      HapticFeedback.lightImpact();
+                      context.push('/friend-profile', extra: f.profile);
+                    }
+                  },
+                  onOpenDrop: onOpenDrop,
+                  tutorialStep: tutorialStep,
+                ),
               ),
             ),
             const SizedBox(height: 24),
             if (topFriend != null)
-              EntranceFadeSlide(
-                delayMs: 300,
-                child: _HighlightCard(
-                  currentUserName: currentUserName,
-                  friend: topFriend,
-                  streakCount: topStreak,
-                  onSendDrop: () => onSendDrop(topFriend),
+              maybeDim(
+                dim: isTutorialActive,
+                child: EntranceFadeSlide(
+                  delayMs: 300,
+                  child: _HighlightCard(
+                    currentUserName: currentUserName,
+                    friend: topFriend,
+                    streakCount: topStreak,
+                    onSendDrop: () => onSendDrop(topFriend),
+                  ),
                 ),
               ),
             if (topFriend != null) const SizedBox(height: 24),
-            EntranceFadeSlide(
-              delayMs: 400,
-              child: _AllFriendsSection(
-                userId: userId,
-                socialState: socialState,
-                onFriendTap: (f) {
-                  if (f.profile != null) {
-                    HapticFeedback.lightImpact();
-                    context.push('/friend-profile', extra: f.profile);
-                  }
-                },
-                onSendDrop: onSendDrop,
-                onOpenDrop: onOpenDrop,
+            maybeDim(
+              dim: isStep2,
+              child: EntranceFadeSlide(
+                delayMs: 400,
+                child: _AllFriendsSection(
+                  userId: userId,
+                  socialState: socialState,
+                  onFriendTap: (f) {
+                    if (f.profile != null) {
+                      HapticFeedback.lightImpact();
+                      context.push('/friend-profile', extra: f.profile);
+                    }
+                  },
+                  onSendDrop: onSendDrop,
+                  onOpenDrop: onOpenDrop,
+                  tutorialStep: tutorialStep,
+                ),
               ),
             ),
           ],
@@ -469,12 +563,14 @@ class _ClosestStreaksSection extends StatelessWidget {
   final SocialState socialState;
   final void Function(Friend friend) onFriendTap;
   final void Function(dynamic drop)? onOpenDrop;
+  final TutorialStep tutorialStep;
 
   const _ClosestStreaksSection({
     required this.userId,
     required this.socialState,
     required this.onFriendTap,
     this.onOpenDrop,
+    required this.tutorialStep,
   });
 
   int _streakForFriend(Friend f) {
@@ -519,7 +615,10 @@ class _ClosestStreaksSection extends StatelessWidget {
                   ? (f.userId1 == userId ? f.userId2 : f.userId1)
                   : '';
               final unopenedDrops = socialState.receivedDrops.where((d) => d.senderId == fid && !d.isOpened).toList();
-              return _StreakAvatarItem(
+              final isCloooBuddy = f.profile?.id == '10000000-1000-1000-1000-100000000000';
+              final isDimmed = (tutorialStep == TutorialStep.step5StreakExplanation) && !isCloooBuddy;
+
+              Widget item = _StreakAvatarItem(
                 name: friendName, 
                 streak: streak,
                 onTap: () {
@@ -531,6 +630,15 @@ class _ClosestStreaksSection extends StatelessWidget {
                 },
                 unopenedCount: unopenedDrops.length,
               );
+
+              if (isDimmed) {
+                item = Opacity(
+                  opacity: 0.25,
+                  child: IgnorePointer(child: item),
+                );
+              }
+
+              return item;
             },
           ),
         ),
@@ -747,6 +855,7 @@ class _AllFriendsSection extends StatelessWidget {
   final void Function(Friend friend) onFriendTap;
   final void Function(Friend friend) onSendDrop;
   final void Function(dynamic drop)? onOpenDrop;
+  final TutorialStep tutorialStep;
 
   const _AllFriendsSection({
     required this.userId,
@@ -754,6 +863,7 @@ class _AllFriendsSection extends StatelessWidget {
     required this.onFriendTap,
     required this.onSendDrop,
     this.onOpenDrop,
+    required this.tutorialStep,
   });
 
   int _streakForFriend(Friend f) {
@@ -829,9 +939,19 @@ class _AllFriendsSection extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'All friends',
-              style: AppTypography.h2Inter.copyWith(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.black),
+            Opacity(
+              opacity: (tutorialStep == TutorialStep.step3SendDrop ||
+                      tutorialStep == TutorialStep.step5StreakExplanation)
+                  ? 0.25
+                  : 1.0,
+              child: Text(
+                'All friends',
+                style: AppTypography.h2Inter.copyWith(
+                  fontSize: 16, 
+                  fontWeight: FontWeight.w600, 
+                  color: AppColors.black,
+                ),
+              ),
             ),
           ],
         ),
@@ -857,7 +977,12 @@ class _AllFriendsSection extends StatelessWidget {
                     : '';
                 final alreadySent = socialState.sentTodayFriendIds.contains(fid);
                 final unopenedDrops = socialState.receivedDrops.where((d) => d.senderId == fid && !d.isOpened).toList();
-                return _FriendTile(
+                
+                final isCloooBuddy = f.profile?.id == '10000000-1000-1000-1000-100000000000';
+                final isDimmed = (tutorialStep == TutorialStep.step3SendDrop || tutorialStep == TutorialStep.step5StreakExplanation) && !isCloooBuddy;
+
+                 Widget tile = _FriendTile(
+                  key: isCloooBuddy ? cloooStreakKey : null,
                   name: friendName,
                   streak: streak,
                   hasStreak: streak > 0,
@@ -871,7 +996,17 @@ class _AllFriendsSection extends StatelessWidget {
                   onSendDrop: () => onSendDrop(f),
                   alreadySent: alreadySent,
                   unopenedCount: unopenedDrops.length,
+                  isCloooBuddy: isCloooBuddy,
                 );
+ 
+                if (isDimmed) {
+                  tile = Opacity(
+                    opacity: 0.25,
+                    child: IgnorePointer(child: tile),
+                  );
+                }
+ 
+                return tile;
               },
             ),
           ),
@@ -880,7 +1015,7 @@ class _AllFriendsSection extends StatelessWidget {
     );
   }
 }
-
+ 
 class _FriendTile extends StatelessWidget {
   final String name;
   final int streak;
@@ -889,8 +1024,10 @@ class _FriendTile extends StatelessWidget {
   final VoidCallback? onSendDrop;
   final bool alreadySent;
   final int unopenedCount;
-
+  final bool isCloooBuddy;
+ 
   const _FriendTile({
+    super.key,
     required this.name,
     required this.streak,
     required this.hasStreak,
@@ -898,110 +1035,316 @@ class _FriendTile extends StatelessWidget {
     this.onSendDrop,
     this.alreadySent = false,
     this.unopenedCount = 0,
+    this.isCloooBuddy = false,
   });
+
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          children: [
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                AvatarCircle(size: 48, name: name),
-                if (hasStreak)
-                  Positioned(
-                    bottom: -2,
-                    right: -2,
-                    child: Container(
-                      width: 20,
-                      height: 20,
-                      decoration: const BoxDecoration(
-                        color: AppColors.white,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Center(
-                        child: const Text('🔥', style: TextStyle(fontSize: 12, fontFamily: 'Apple Color Emoji')),
-                      ),
-                    ),
-                  ),
-                if (unopenedCount > 0)
-                  Positioned(
-                    right: -2,
-                    top: -2,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                      child: Text(
-                        '$unopenedCount',
-                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: AppTypography.bodyInter.copyWith(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.black),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  hasStreak ? '$streak-day streak' : 'No streak yet',
-                  style: AppTypography.bodyInter.copyWith(fontSize: 13, color: AppColors.purplePrimary),
-                ),
-                Text(
-                  hasStreak ? 'Active today' : 'Send a drop to start!',
-                  style: AppTypography.bodyInter.copyWith(fontSize: 13, color: AppColors.grey500),
-                ),
-              ],
+    return Consumer(
+      builder: (context, ref, _) {
+        final tutorialStep = ref.watch(tutorialStepProvider);
+        final isStep5 = tutorialStep == TutorialStep.step5StreakExplanation && isCloooBuddy;
+
+        Widget badge = Container(
+          width: isStep5 ? 24 : 20,
+          height: isStep5 ? 24 : 20,
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            shape: BoxShape.circle,
+            boxShadow: isStep5
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFFF06A19).withValues(alpha: 0.8),
+                      blurRadius: 8,
+                      spreadRadius: 2,
+                    )
+                  ]
+                : null,
+          ),
+          child: Center(
+            child: Text(
+              '🔥',
+              style: TextStyle(
+                fontSize: isStep5 ? 14 : 12,
+                fontFamily: 'Apple Color Emoji',
+              ),
             ),
           ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: () {
-              HapticFeedback.lightImpact();
-              if (onSendDrop != null) onSendDrop!();
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: hasStreak ? AppColors.paleOrange : AppColors.paleLavender,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (hasStreak) ...[
-                    const Text('🔥', style: TextStyle(fontSize: 14, fontFamily: 'Apple Color Emoji')),
-                    const SizedBox(width: 4),
-                    Text(
-                      '$streak',
-                      style: AppTypography.bodyInter.copyWith(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.black),
-                    ),
-                  ] else ...[
-                    Text(
-                      'Send drop',
-                      style: AppTypography.bodyInter.copyWith(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.purplePrimary),
-                    ),
+        );
+
+        if (isStep5) {
+          badge = _PulsingBadgeWrapper(child: badge);
+        }
+
+        return GestureDetector(
+          onTap: onTap,
+          behavior: HitTestBehavior.opaque,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    AvatarCircle(size: 48, name: name),
+                    if (hasStreak)
+                      Positioned(
+                        bottom: isStep5 ? -4 : -2,
+                        right: isStep5 ? -4 : -2,
+                        child: badge,
+                      ),
+                    if (unopenedCount > 0)
+                      Positioned(
+                        right: -2,
+                        top: -2,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                          child: Text(
+                            '$unopenedCount',
+                            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
                   ],
-                  const SizedBox(width: 2),
-                  const Icon(Icons.chevron_right, size: 16, color: AppColors.grey400),
-                ],
-              ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        style: AppTypography.bodyInter.copyWith(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.black),
+                      ),
+                      const SizedBox(height: 2),
+                      isStep5
+                          ? Container(
+                              margin: const EdgeInsets.only(top: 2, bottom: 2),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF06A19).withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: const Color(0xFFF06A19).withValues(alpha: 0.3)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text('🔥 ', style: TextStyle(fontSize: 12)),
+                                  Text(
+                                    '$streak-day streak',
+                                    style: AppTypography.bodyInter.copyWith(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                      color: const Color(0xFFF06A19),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : Text(
+                              hasStreak ? '$streak-day streak' : 'No streak yet',
+                              style: AppTypography.bodyInter.copyWith(fontSize: 13, color: AppColors.purplePrimary),
+                            ),
+                      Text(
+                        hasStreak ? 'Active today' : 'Send a drop to start!',
+                        style: AppTypography.bodyInter.copyWith(fontSize: 13, color: AppColors.grey500),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Consumer(
+                  builder: (context, ref, _) {
+                    final tutorialStep = ref.watch(tutorialStepProvider);
+                    final isSendDropStep = tutorialStep == TutorialStep.step3SendDrop;
+
+                    Widget button = Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: hasStreak ? AppColors.paleOrange : AppColors.paleLavender,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (hasStreak) ...[
+                            const Text('🔥', style: TextStyle(fontSize: 14, fontFamily: 'Apple Color Emoji')),
+                            const SizedBox(width: 4),
+                            Text(
+                              '$streak',
+                              style: AppTypography.bodyInter.copyWith(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.black),
+                            ),
+                          ] else ...[
+                            Text(
+                              'Send drop',
+                              style: AppTypography.bodyInter.copyWith(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.purplePrimary),
+                            ),
+                          ],
+                          const SizedBox(width: 2),
+                          const Icon(Icons.chevron_right, size: 16, color: AppColors.grey400),
+                        ],
+                      ),
+                    );
+
+                    if (isCloooBuddy && isSendDropStep) {
+                      button = _PulsingButtonWrapper(
+                        active: true,
+                        child: button,
+                      );
+                    }
+
+                    return GestureDetector(
+                      key: isCloooBuddy ? sendDropButtonKey : null,
+                      onTap: () {
+                        if (isSendDropStep && !isCloooBuddy) return;
+                        HapticFeedback.lightImpact();
+                        if (isCloooBuddy && isSendDropStep) {
+                          ref.read(tutorialStepProvider.notifier).nextStep();
+                          return;
+                        }
+                        if (onSendDrop != null) onSendDrop!();
+                      },
+                      child: button,
+                    );
+                  },
+                ),
+              ],
             ),
           ),
-        ],
-      ),
-    ),
-  );
+        );
+      },
+    );
+  }
 }
+
+class _PulsingButtonWrapper extends StatefulWidget {
+  final Widget child;
+  final bool active;
+
+  const _PulsingButtonWrapper({
+    required this.child,
+    required this.active,
+  });
+
+  @override
+  State<_PulsingButtonWrapper> createState() => _PulsingButtonWrapperState();
+}
+
+class _PulsingButtonWrapperState extends State<_PulsingButtonWrapper>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _glowAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.08).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeInOut,
+      ),
+    );
+
+    _glowAnimation = Tween<double>(begin: 2.0, end: 8.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeInOut,
+      ),
+    );
+
+    if (widget.active) {
+      _controller.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _PulsingButtonWrapper oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.active && !_controller.isAnimating) {
+      _controller.repeat(reverse: true);
+    } else if (!widget.active && _controller.isAnimating) {
+      _controller.stop();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.active) return widget.child;
+
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _scaleAnimation.value,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFF06A19).withValues(alpha: 0.35),
+                  blurRadius: _glowAnimation.value,
+                  spreadRadius: _glowAnimation.value / 3,
+                ),
+              ],
+            ),
+            child: widget.child,
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _PulsingBadgeWrapper extends StatefulWidget {
+  final Widget child;
+  const _PulsingBadgeWrapper({required this.child});
+
+  @override
+  State<_PulsingBadgeWrapper> createState() => _PulsingBadgeWrapperState();
+}
+
+class _PulsingBadgeWrapperState extends State<_PulsingBadgeWrapper>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    )..repeat(reverse: true);
+    _animation = Tween<double>(begin: 1.0, end: 1.25).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: _animation,
+      child: widget.child,
+    );
+  }
 }

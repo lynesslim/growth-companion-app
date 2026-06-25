@@ -6,91 +6,97 @@ import '../../../providers/social_provider.dart';
 import '../../../providers/user_provider.dart';
 import '../../../providers/journal_provider.dart';
 
-// ponytail: shared utility for sending drops/books to avoid duplicating bottom sheets
+// ponytail: shared utility for sending drops/books — tutorial step4 is in dashboard_shell
 void showSendDropDialog(BuildContext context, WidgetRef ref, Friend friend) {
   final friendId = friend.userId1 == ref.read(userProvider).valueOrNull?.id ? friend.userId2 : friend.userId1;
   final friendName = friend.profile?.name ?? 'Friend';
-
-  final socialState = ref.read(socialProvider).valueOrNull;
-  final isAdmin = socialState?.isAdmin ?? false;
-  final alreadySent = (socialState?.sentTodayFriendIds.contains(friendId) ?? false) && !isAdmin;
 
   showModalBottomSheet(
     context: context,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
-    builder: (ctx) => SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40, height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.grey300,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Text('Send to $friendName', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.grey900)),
-            const SizedBox(height: 24),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
+    builder: (ctx) => Consumer(
+      builder: (_, consumerRef, __) {
+        final socialState = consumerRef.watch(socialProvider).valueOrNull;
+        final isAdmin = socialState?.isAdmin ?? false;
+        final alreadySent = (socialState?.sentTodayFriendIds.contains(friendId) ?? false) && !isAdmin;
+
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.grey300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-                child: Icon(Icons.card_giftcard, color: alreadySent ? AppColors.grey400 : AppColors.primary),
-              ),
-              title: Text('Send Blind Box (AI)', style: TextStyle(color: alreadySent ? AppColors.grey400 : null)),
-              subtitle: Text(
-                alreadySent ? 'Already sent today' : 'AI generates a book based on their goals',
-                style: TextStyle(color: alreadySent ? AppColors.grey400 : AppColors.grey600),
-              ),
-              enabled: !alreadySent,
-              onTap: alreadySent ? null : () async {
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Generating and sending...')));
-                try {
-                  await ref.read(socialProvider.notifier).sendDrop(friendId);
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text(e.toString().replaceAll('Exception: ', '')),
-                      backgroundColor: AppColors.error,
-                    ));
-                  }
-                }
-              },
-            ),
-            const Divider(),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
+                const SizedBox(height: 20),
+                Text('Send to $friendName', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.grey900)),
+                const SizedBox(height: 24),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(Icons.card_giftcard, color: alreadySent ? AppColors.grey400 : AppColors.primary),
+                  ),
+                  title: Text('Send Blind Box (AI)', style: TextStyle(color: alreadySent ? AppColors.grey400 : null)),
+                  subtitle: Text(
+                    alreadySent ? 'Already sent today' : 'AI generates a book based on their goals',
+                    style: TextStyle(color: alreadySent ? AppColors.grey400 : AppColors.grey600),
+                  ),
+                  enabled: !alreadySent,
+                  onTap: alreadySent ? null : () async {
+                    Navigator.pop(ctx);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Generating and sending...')));
+                    }
+                    try {
+                      await consumerRef.read(socialProvider.notifier).sendDrop(friendId);
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text(e.toString().replaceAll('Exception: ', '')),
+                          backgroundColor: AppColors.error,
+                        ));
+                      }
+                    }
+                  },
                 ),
-                child: Icon(Icons.menu_book_rounded, color: alreadySent ? AppColors.grey400 : AppColors.primary),
-              ),
-              title: Text('Send from Journal', style: TextStyle(color: alreadySent ? AppColors.grey400 : null)),
-              subtitle: Text(
-                alreadySent ? 'Already sent today' : "Choose a book you've read",
-                style: TextStyle(color: alreadySent ? AppColors.grey400 : AppColors.grey600),
-              ),
-              enabled: !alreadySent,
-              onTap: alreadySent ? null : () {
-                Navigator.pop(ctx);
-                _showJournalPicker(context, ref, friendId);
-              },
+                const Divider(),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(Icons.menu_book_rounded, color: alreadySent ? AppColors.grey400 : AppColors.primary),
+                  ),
+                  title: Text('Send from Journal', style: TextStyle(color: alreadySent ? AppColors.grey400 : null)),
+                  subtitle: Text(
+                    alreadySent ? 'Already sent today' : "Choose a book you've read",
+                    style: TextStyle(color: alreadySent ? AppColors.grey400 : AppColors.grey600),
+                  ),
+                  enabled: !alreadySent,
+                  onTap: alreadySent ? null : () {
+                    Navigator.pop(ctx);
+                    _showJournalPicker(context, consumerRef, friendId);
+                  },
+                ),
+                const SizedBox(height: 8),
+              ],
             ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     ),
   );
 }
@@ -194,3 +200,5 @@ void _showJournalPicker(BuildContext context, WidgetRef ref, String friendId) {
     ),
   );
 }
+
+

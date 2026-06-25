@@ -11,6 +11,7 @@ import '../../core/app_typography.dart';
 import '../../core/animated_widgets.dart';
 import '../../providers/growth_drop_provider.dart';
 import '../../providers/social_provider.dart';
+import '../../providers/tutorial_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../shared/widgets/avatar_ring.dart';
 import '../../domain/models/friend.dart';
@@ -214,6 +215,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 child: GestureDetector(
                   onTap: () {
                     Navigator.pop(ctx);
+                    ref.read(tutorialStepProvider.notifier).startTutorial();
                     context.go('/social');
                   },
                   child: Container(
@@ -241,7 +243,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
               const SizedBox(height: 12),
               TextButton(
-                onPressed: () => Navigator.pop(ctx),
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  ref.read(tutorialStepProvider.notifier).startTutorial();
+                },
                 child: const Text(
                   'Later',
                   style: TextStyle(color: AppColors.grey500, fontSize: 14),
@@ -335,15 +340,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Future<void> _runModalQueue() async {
     if (!mounted) return;
 
-    // Native check to ensure the Home Screen is the top-most active/visible route
-    final modalRoute = ModalRoute.of(context);
-    if (modalRoute == null || !modalRoute.isCurrent) return;
+    // Native check: Ensure the Dashboard Shell route on the root navigator is the top-most active route.
+    // This prevents modals from popping up while the user is on a stacked root route like /streak or /book.
+    try {
+      final parentRoute = ModalRoute.of(Navigator.of(context).context);
+      if (parentRoute != null && !parentRoute.isCurrent) return;
+    } catch (e) {
+      debugPrint('HomeScreen modal queue: error checking parent route: $e');
+    }
 
     final dropState = ref.read(growthDropProvider);
     final socialState = ref.read(socialProvider).valueOrNull;
     final user = ref.read(userProvider).valueOrNull;
 
     if (dropState.isLoading || socialState == null || user == null) return;
+
     final prefs = await SharedPreferences.getInstance();
 
     // 1. Priority 1: Invite Gift Unboxing Modal (Invite Signups Only)
@@ -374,13 +385,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       return;
     }
 
-    // 3. Priority 3: Post-Reading Social Modal (Only after daily drop completion)
-    final hasPendingStreak = prefs.getBool('_pendingStreakComplete') ?? false;
-    final today = DateTime.now().toIso8601String().split('T')[0];
-    final lastShownKey = '_postReadingModalLastShown_v2_${user.id}';
-    final lastShown = prefs.getString(lastShownKey);
-    if (hasPendingStreak && lastShown != today) {
-      _checkPostReadingModal();
+    // 3. Priority 3: Tutorial Trigger (Only after completing their first ever book reading session)
+    if (user.booksRead > 0 && !user.hasCompletedTutorial && ref.read(tutorialStepProvider) == TutorialStep.none) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ref.read(tutorialStepProvider.notifier).startTutorial();
+        }
+      });
       return;
     }
   }

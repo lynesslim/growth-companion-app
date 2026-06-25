@@ -1,146 +1,376 @@
-# Instructions for OpenCode: Implementing User-Specific SharedPreferences Keys for Post-Reading Modal
+# Instructions for OpenCode: Implementing Clooo Buddy Bot & Forced First-Time User Tutorial
 
-Please update `lib/src/features/home/home_screen.dart` to use user-specific SharedPreferences keys for tracking when the post-reading modal was last shown. This resolves the issue where the modal is suppressed for new test users on the same device/emulator.
-
-Follow the exact technical details below.
+Please implement the forced tutorial and Clooo Buddy bot integration in the Flutter frontend. Follow the exact technical details below.
 
 ---
 
-## 1. Update `_runModalQueue` in `home_screen.dart`
+## 1. Create the Tutorial State Provider & Global Keys
 
-Find the post-reading modal checking block (Priority 3) in `_runModalQueue()` and update it to key the `lastShown` date by `user.id`:
+Create a new file `lib/src/providers/tutorial_provider.dart`:
 ```dart
-    // 3. Priority 3: Post-Reading Social Modal (Only after daily drop completion)
-    final hasPendingStreak = prefs.getBool('_pendingStreakComplete') ?? false;
-    final today = DateTime.now().toIso8601String().split('T')[0];
-    final lastShownKey = '_postReadingModalLastShown_v2_${user.id}';
-    final lastShown = prefs.getString(lastShownKey);
-    if (hasPendingStreak && lastShown != today) {
-      _checkPostReadingModal();
-      return;
-    }
-```
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
----
+enum TutorialStep {
+  none,
+  step1SocialTab,
+  step2AcceptRequest,
+  step3SendDrop,
+  step4SendBlindBox,
+  step5StreakExplanation,
+}
 
-## 2. Update `_checkPostReadingModal` in `home_screen.dart`
+// Global Keys for highlighting targets
+final socialTabKey = GlobalKey();
+final acceptRequestKey = GlobalKey();
+final sendDropButtonKey = GlobalKey();
+final sendBlindBoxKey = GlobalKey();
 
-Find `_checkPostReadingModal()` and update it to retrieve the active `userId` from Supabase, key the SharedPreferences check/write using `userId`, and return early if `userId` is null:
-```dart
-  Future<void> _checkPostReadingModal() async {
-    // Early-return checks first — these must not touch _isCheckingSocialModal
-    final prefs = await SharedPreferences.getInstance();
-    if (!(prefs.getBool('_pendingStreakComplete') ?? false)) return;
+class TutorialNotifier extends StateNotifier<TutorialStep> {
+  TutorialNotifier() : super(TutorialStep.none);
 
-    final userId = Supabase.instance.client.auth.currentUser?.id;
-    if (userId == null) return;
+  void startTutorial() {
+    state = TutorialStep.socialTabKey.currentContext == null
+        ? TutorialStep.step1SocialTab
+        : TutorialStep.step2AcceptRequest;
+  }
 
-    final today = DateTime.now().toIso8601String().split('T')[0];
-    final lastShownKey = '_postReadingModalLastShown_v2_$userId';
-    if (prefs.getString(lastShownKey) == today) return;
+  void setStep(TutorialStep step) {
+    state = step;
+  }
 
-    if (!context.mounted) return;
-    final modalRoute = ModalRoute.of(context);
-    if (modalRoute == null || !modalRoute.isCurrent) return;
-
-    // All guards passed — lock and proceed
-    if (_isCheckingSocialModal) return;
-    _isCheckingSocialModal = true;
-    try {
-      await prefs.remove('_pendingStreakComplete');
-      await prefs.setString(lastShownKey, today);
-
-      await showDialog(
-        context: context,
-        barrierDismissible: true,
-        builder: (ctx) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-          backgroundColor: AppColors.white,
-          contentPadding: const EdgeInsets.all(28),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 72,
-                height: 72,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppColors.primary, AppColors.pinkLight],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(22),
-                ),
-                child: const Center(
-                  child: Icon(Icons.people_rounded, color: AppColors.white, size: 32),
-                ),
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                'Check out your friends\' streaks and gifts!',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.grey900,
-                  height: 1.4,
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'See who\'s reading and send a book to keep the streak going.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 15, color: AppColors.grey500, height: 1.5),
-              ),
-              const SizedBox(height: 28),
-              SizedBox(
-                width: double.infinity,
-                child: GestureDetector(
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    context.push('/social');
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [AppColors.primary, AppColors.pinkLight],
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: const Center(
-                      child: Text(
-                        'Go to Friends',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text(
-                  'Later',
-                  style: TextStyle(color: AppColors.grey500, fontSize: 14),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-      _isCheckingSocialModal = false;
-    } catch (e, stack) {
-      _isCheckingSocialModal = false;
-      debugPrint('_checkPostReadingModal: $e\n$stack');
+  void nextStep() {
+    if (state == TutorialStep.step1SocialTab) {
+      state = TutorialStep.step2AcceptRequest;
+    } else if (state == TutorialStep.step2AcceptRequest) {
+      state = TutorialStep.step3SendDrop;
+    } else if (state == TutorialStep.step3SendDrop) {
+      state = TutorialStep.step4SendBlindBox;
+    } else if (state == TutorialStep.step4SendBlindBox) {
+      state = TutorialStep.step5StreakExplanation;
     }
   }
+
+  void completeTutorial() {
+    state = TutorialStep.none;
+  }
+}
+
+final tutorialStepProvider =
+    StateNotifierProvider<TutorialNotifier, TutorialStep>((ref) {
+  return TutorialNotifier();
+});
 ```
 
-Please execute these changes carefully, ensuring exact match and correct syntax.
+---
+
+## 2. Update the Avatar Widget for Clooo Buddy
+
+In `lib/src/shared/widgets/avatar_ring.dart`, update `AvatarCircle` to render the app icon asset if the user is Clooo Buddy:
+```dart
+class AvatarCircle extends StatelessWidget {
+  final double size;
+  final String name;
+
+  const AvatarCircle({super.key, required this.size, required this.name});
+
+  @override
+  Widget build(BuildContext context) {
+    final isCloooBuddy = name == 'Clooo Buddy';
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: isCloooBuddy ? Colors.white : _avatarColor(name),
+        shape: BoxShape.circle,
+      ),
+      child: Center(
+        child: isCloooBuddy
+            ? ClipRRect(
+                borderRadius: BorderRadius.circular(size / 2),
+                child: Image.asset(
+                  'assets/images/app-icon.webp',
+                  width: size,
+                  height: size,
+                  fit: BoxFit.cover,
+                ),
+              )
+            : Text(
+                _initials(name),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: size * 0.38,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+      ),
+    );
+  }
+}
+```
+
+---
+
+## 3. Implement the Custom Spotlight Overlay in `DashboardShell`
+
+Convert `DashboardShell` in `lib/src/features/dashboard/dashboard_shell.dart` to a `ConsumerStatefulWidget` and implement the `TutorialOverlay` and spotlight panels:
+
+1. **Update `DashboardShell`**:
+   - Convert to `ConsumerStatefulWidget`.
+   - Wrap the main Scaffold in a `Stack`.
+   - If `ref.watch(tutorialStepProvider) != TutorialStep.none`, overlay the `TutorialOverlay`.
+   - Pass `socialTabKey` to the Social tab (index 1) in `_FloatingBottomNav`.
+   - If the tutorial is active and `step == TutorialStep.step1SocialTab`, disable/ignore taps on other tabs (only allow tapping the Social tab).
+2. **Implement `TutorialOverlay`**:
+   Create a stateful widget that calculates the bounding box of the target key using a post-frame callback:
+   ```dart
+   class TutorialOverlay extends StatefulWidget {
+     final GlobalKey targetKey;
+     final String text;
+     final bool isFullScreen;
+     final VoidCallback? onNext;
+
+     const TutorialOverlay({
+       super.key,
+       required this.targetKey,
+       required this.text,
+       this.isFullScreen = false,
+       this.onNext,
+     });
+
+     @override
+     State<TutorialOverlay> createState() => _TutorialOverlayState();
+   }
+
+   class _TutorialOverlayState extends State<TutorialOverlay> {
+     Rect? _targetRect;
+
+     @override
+     void initState() {
+       super.initState();
+       _updateRect();
+     }
+
+     @override
+     void didUpdateWidget(covariant TutorialOverlay oldWidget) {
+       super.didUpdateWidget(oldWidget);
+       _updateRect();
+     }
+
+     void _updateRect() {
+       if (widget.isFullScreen) return;
+       WidgetsBinding.instance.addPostFrameCallback((_) {
+         if (!mounted) return;
+         final renderBox = widget.targetKey.currentContext?.findRenderObject() as RenderBox?;
+         if (renderBox != null) {
+           final position = renderBox.localToGlobal(Offset.zero);
+           final size = renderBox.size;
+           final newRect = position & size;
+           if (newRect != _targetRect) {
+             setState(() => _targetRect = newRect);
+           }
+         } else {
+           Future.delayed(const Duration(milliseconds: 100), _updateRect);
+         }
+       });
+     }
+
+     @override
+     Widget build(BuildContext context) {
+       final size = MediaQuery.of(context).size;
+       if (widget.isFullScreen) {
+         return Container(
+           color: Colors.black.withOpacity(0.8),
+           child: Center(
+             child: Card(
+               margin: const EdgeInsets.all(24),
+               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+               color: Colors.white,
+               elevation: 12,
+               child: Padding(
+                 padding: const EdgeInsets.all(28),
+                 child: Column(
+                   mainAxisSize: MainAxisSize.min,
+                   children: [
+                     const Text('🔥', style: TextStyle(fontSize: 48)),
+                     const SizedBox(height: 16),
+                     Text(
+                       'Streak Established!',
+                       style: GoogleFonts.playfairDisplay(
+                         fontSize: 24,
+                         fontWeight: FontWeight.bold,
+                         color: AppColors.grey900,
+                       ),
+                     ),
+                     const SizedBox(height: 16),
+                     Text(
+                       widget.text,
+                       textAlign: TextAlign.center,
+                       style: const TextStyle(fontSize: 15, color: AppColors.grey600, height: 1.5),
+                     ),
+                     const SizedBox(height: 28),
+                     SizedBox(
+                       width: double.infinity,
+                       child: GestureDetector(
+                         onTap: widget.onNext,
+                         child: Container(
+                           padding: const EdgeInsets.symmetric(vertical: 16),
+                           decoration: BoxDecoration(
+                             gradient: const LinearGradient(
+                               colors: [AppColors.primary, AppColors.pinkLight],
+                               begin: Alignment.centerLeft,
+                               end: Alignment.centerRight,
+                             ),
+                             borderRadius: BorderRadius.circular(16),
+                           ),
+                           child: const Center(
+                             child: Text(
+                               'Got it!',
+                               style: TextStyle(
+                                 fontSize: 16,
+                                 fontWeight: FontWeight.w600,
+                                 color: Colors.white,
+                               ),
+                             ),
+                           ),
+                         ),
+                       ),
+                     ),
+                   ],
+                 ),
+               ),
+             ),
+           ),
+         );
+       }
+
+       if (_targetRect == null) {
+         return Container(color: Colors.black.withOpacity(0.8));
+       }
+
+       final rect = _targetRect!;
+       final cardOnTop = rect.top > size.height / 2;
+
+       return Stack(
+         children: [
+           // 1. Top Panel
+           Positioned(
+             top: 0,
+             left: 0,
+             right: 0,
+             height: rect.top,
+             child: Container(color: Colors.black.withOpacity(0.75)),
+           ),
+           // 2. Bottom Panel
+           Positioned(
+             top: rect.bottom,
+             left: 0,
+             right: 0,
+             bottom: 0,
+             child: Container(color: Colors.black.withOpacity(0.75)),
+           ),
+           // 3. Left Panel
+           Positioned(
+             top: rect.top,
+             left: 0,
+             width: rect.left,
+             height: rect.height,
+             child: Container(color: Colors.black.withOpacity(0.75)),
+           ),
+           // 4. Right Panel
+           Positioned(
+             top: rect.top,
+             left: rect.right,
+             right: 0,
+             height: rect.height,
+             child: Container(color: Colors.black.withOpacity(0.75)),
+           ),
+           // 5. Instruction Card
+           Positioned(
+             left: 20,
+             right: 20,
+             top: cardOnTop ? null : rect.bottom + 20,
+             bottom: cardOnTop ? (size.height - rect.top) + 20 : null,
+             child: Card(
+               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+               color: Colors.white,
+               elevation: 8,
+               child: Padding(
+                 padding: const EdgeInsets.all(20),
+                 child: Text(
+                   widget.text,
+                   textAlign: TextAlign.center,
+                   style: GoogleFonts.inter(
+                     fontSize: 15,
+                     fontWeight: FontWeight.w500,
+                     color: AppColors.grey800,
+                     height: 1.45,
+                   ),
+                 ),
+               ),
+             ),
+           ),
+         ],
+       );
+     }
+   }
+   ```
+
+---
+
+## 4. Integrate Tutorial Triggers in `home_screen.dart`
+
+In `_checkPostReadingModal()` in `lib/src/features/home/home_screen.dart`, start the tutorial when the user finishes their post-reading social modal:
+1. When they tap "Go to Friends", start the tutorial and navigate:
+   ```dart
+                  Navigator.pop(ctx);
+                  ref.read(tutorialStepProvider.notifier).startTutorial();
+                  context.push('/social');
+   ```
+2. When they tap "Later", start the tutorial at Step 1 (which highlights the Social tab):
+   ```dart
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  ref.read(tutorialStepProvider.notifier).startTutorial();
+                },
+                child: const Text('Later', ...),
+              )
+   ```
+
+---
+
+## 5. Hook Up Steps in `friends_screen.dart`
+
+In `lib/src/features/social/friends_screen.dart`:
+1. Watch `tutorialStepProvider`.
+2. In `_buildPendingRequest(Friend req)`:
+   - Check if `req.profile?.id == '10000000-1000-1000-1000-100000000000'` (Clooo Buddy).
+   - If yes, attach `acceptRequestKey` to the check_circle `IconButton`'s key.
+   - When clicked, in the `onPressed`, call `ref.read(tutorialStepProvider.notifier).nextStep();` alongside the friend request acceptance.
+3. In `_FriendTile`:
+   - If `name == 'Clooo Buddy'`, attach `sendDropButtonKey` to the "Send drop" button's gesture detector.
+   - When tapped, call `ref.read(tutorialStepProvider.notifier).nextStep();` in the tap action.
+
+---
+
+## 6. Hook Up Step 4 in `send_drop_dialog.dart`
+
+In `lib/src/features/social/widgets/send_drop_dialog.dart` (or where `showSendDropDialog` is defined):
+1. Import `tutorial_provider.dart`.
+2. In the "Send Blind Box" list item / button:
+   - Attach `sendBlindBoxKey` to its key.
+   - In its `onTap`, after the send call succeeds, advance the step:
+     ```dart
+     ref.read(tutorialStepProvider.notifier).setStep(TutorialStep.step5StreakExplanation);
+     ```
+
+---
+
+## 7. Complete the Tutorial in Step 5
+
+In the `TutorialOverlay` build in `dashboard_shell.dart`, for `step5StreakExplanation`, pass the success text and set `onNext`:
+- **Text**: `"Drop sent successfully! 🎁\n\nClooo Buddy has immediately sent you a gift back! You now have a 1-day streak with Clooo Buddy! 🔥\n\nYou can maintain the streak with any of your friends. Keep the flame alive by sharing a blind box or recommending a book daily!"`
+- **onNext**: `ref.read(tutorialStepProvider.notifier).completeTutorial();`
+
+Please execute these changes carefully. Verify that the overlay blocks touches outside the highlighted target but allows clicking on the highlighted target. Ensure there are no compilation or layout errors.

@@ -10,6 +10,67 @@ import 'src/features/onboarding/pre_onboarding_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // ponytail: override ErrorWidget.builder to show only the main exception message clearly and print to console
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    // Print to developer console so it's permanently readable in Chrome DevTools
+    debugPrint('---------------- FLUTTER ERROR DIAGNOSTICS ----------------');
+    debugPrint(details.exception.toString());
+    debugPrint(details.stack?.toString());
+    debugPrint('-----------------------------------------------------------');
+
+    return Material(
+      color: const Color(0xFF121212),
+      child: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.only(left: 24, right: 24, bottom: 24, top: 280), // Push down below coach card
+          child: Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFF221515),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.redAccent, width: 2),
+            ),
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.error_outline, color: Colors.redAccent, size: 28),
+                    SizedBox(width: 12),
+                    Text(
+                      'Application Error Detected',
+                      style: TextStyle(color: Colors.redAccent, fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                SelectableText(
+                  details.exception.toString(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontFamily: 'monospace',
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  '💡 Tip: Check your Chrome DevTools Console (F12 -> Console tab) for the full stack trace.',
+                  style: TextStyle(color: Colors.grey, fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+  };
+
+
+
   final prefs = await SharedPreferences.getInstance();
   PreOnboardingState.hasSeen = prefs.getBool('hasSeenPreOnboarding') ?? false;
 

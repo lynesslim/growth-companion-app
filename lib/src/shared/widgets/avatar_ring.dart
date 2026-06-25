@@ -30,24 +30,49 @@ class AvatarCircle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isCloooBuddy = name == 'Clooo Buddy';
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: _avatarColor(name),
+        color: isCloooBuddy ? Colors.white : _avatarColor(name),
         shape: BoxShape.circle,
       ),
       child: Center(
-        child: Text(
-          _initials(name),
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: size * 0.38,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        child: isCloooBuddy
+            ? ClipRRect(
+                borderRadius: BorderRadius.circular(size / 2),
+                child: Image.asset(
+                  'assets/images/app-icon.webp',
+                  width: size,
+                  height: size,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    // ponytail: fallback to initials if the asset is not bundled/loaded yet
+                    return Center(
+                      child: Text(
+                        _initials(name),
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontSize: size * 0.38,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              )
+            : Text(
+                _initials(name),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: size * 0.38,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
       ),
     );
+
   }
 }
 
